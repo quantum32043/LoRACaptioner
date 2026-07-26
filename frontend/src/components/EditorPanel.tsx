@@ -159,7 +159,7 @@ export default function EditorPanel() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      if ((e.metaKey || e.ctrlKey) && e.code === 'KeyS') {
         e.preventDefault()
         handleSaveRef.current()
       }

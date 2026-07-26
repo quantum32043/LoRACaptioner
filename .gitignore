@@ -9,3 +9,4 @@ __pycache__/
 thumb_cache/
 PLAN.md
 Requirements.txt
+venv/

@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./dataset:/data/dataset
+      - thumb_cache:/data/thumbs
+    environment:
+      - CAPTIONER_DATASET_PATH=/data/dataset
+      - CAPTIONER_THUMB_CACHE_PATH=/data/thumbs
+      - CAPTIONER_THUMB_SIZE=512
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  thumb_cache:

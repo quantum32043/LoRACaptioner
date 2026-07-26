@@ -27,11 +27,13 @@ function App() {
   }, [data])
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-coal-950 text-paper overflow-hidden">
+    <div className="h-screen w-screen flex flex-col bg-coal-950 text-paper overflow-hidden relative">
+      <div className="film-grain fixed inset-0 z-50" />
+      <div className="vignette fixed inset-0 z-40" />
       <TopBar />
       <Toolbar onToggleBatch={() => setBatchOpen(!batchOpen)} />
       {batchOpen && <BatchPanel />}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative z-10">
         <div className="flex flex-col flex-1 overflow-hidden">
           <ImageGrid />
           <StatusStrip />

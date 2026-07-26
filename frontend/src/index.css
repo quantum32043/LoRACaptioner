@@ -6,13 +6,36 @@
   body {
     @apply bg-coal-950 text-paper font-sans antialiased;
     margin: 0;
+    background-image: radial-gradient(ellipse at 50% 0%, rgba(245,160,44,0.03) 0%, transparent 60%);
   }
   ::selection { background: rgba(245, 160, 44, 0.3); }
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #3d352d; border-radius: 3px; }
+  *:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(245, 160, 44, 0.5); border-radius: 4px; }
 }
 
 @layer utilities {
   .film-grain {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/s
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .vignette {
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
+  }
+  .viewfinder-corner {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-color: rgba(245, 160, 44, 0.6);
+    pointer-events: none;
+  }
+  .stagger-fade-up {
+    animation: fadeUp 0.4s ease-out both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}

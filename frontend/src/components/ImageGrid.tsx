@@ -44,6 +44,7 @@ export default function ImageGrid() {
                 <ImageCard
                   key={item.filename}
                   item={item}
+                  index={idx}
                   isSelected={item.filename === selectedFilename}
                   onSelect={() => setSelected(item.filename)}
                 />

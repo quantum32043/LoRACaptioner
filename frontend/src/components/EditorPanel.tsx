@@ -104,7 +104,11 @@ export default function EditorPanel() {
         <p className="font-mono text-[10px] text-paper-faint">{selectedItem.filename}</p>
       </div>
 
-      <div className="flex-1 overflow-hidden bg-coal-950">
+      <div className="flex-1 overflow-hidden bg-coal-950 relative">
+        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-safe/60 z-10" />
+        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-safe/60 z-10" />
+        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-safe/60 z-10" />
+        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-safe/60 z-10" />
         <TransformWrapper>
           <TransformComponent>
             <img src={selectedItem.full_url} alt={selectedItem.filename} className="w-full h-full object-contain" />

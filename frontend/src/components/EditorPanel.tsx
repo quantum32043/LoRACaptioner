@@ -9,12 +9,12 @@ import { toast } from 'sonner'
 import { api } from '../api/client'
 import { useDatasetStore } from '../store/useDatasetStore'
 
-function TagChip({ tag, onRemove, id }: { tag: string; onRemove: () => void; id: string }) {
+function TagChip({ tag, onRemove, onEdit, id }: { tag: string; onRemove: () => void; onEdit: () => void; id: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }
   return (
     <span ref={setNodeRef} style={style} {...attributes} {...listeners} className="inline-flex items-center gap-1 px-2 py-0.5 bg-coal-700 text-paper rounded-md text-xs font-mono cursor-grab active:cursor-grabbing border border-coal-600">
-      {tag}
+      <span className="cursor-pointer hover:text-cyano" onClick={onEdit}>{tag}</span>
       <button onClick={onRemove} className="text-paper-faint hover:text-ember ml-0.5">&times;</button>
     </span>
   )
@@ -32,12 +32,16 @@ export default function EditorPanel() {
 
   const selectedItem = items.find((i) => i.filename === selectedFilename)
   const [caption, setCaption] = useState('')
+  const captionRef = useRef(caption)
+  captionRef.current = caption
   const [tagMode, setTagMode] = useState(true)
   const [dirty, setDirty] = useState(false)
   const [batchMode, setBatchMode] = useState<'append' | 'prepend' | 'set'>('append')
   const [removedTags, setRemovedTags] = useState<string[]>([])
   const [editingTag, setEditingTag] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [editingTagIdx, setEditingTagIdx] = useState<number | null>(null)
+  const [editTagValue, setEditTagValue] = useState('')
   const isBatch = selectedFilenames.length > 0
 
   const selectedItems = items.filter((i) => selectedFilenames.includes(i.filename))
@@ -125,7 +129,7 @@ export default function EditorPanel() {
     if (isBatch) {
       batchSave({ filenames: selectedFilenames, caption, mode: batchMode, remove: removedTags })
     } else if (selectedItem) {
-      save({ filename: selectedItem.filename, caption })
+      save({ filename: selectedItem.filename, caption: captionRef.current })
     }
   }
 
@@ -350,7 +354,32 @@ export default function EditorPanel() {
             }}>
               <SortableContext items={tags.map((_, i) => `tag-${i}`)} strategy={horizontalListSortingStrategy}>
                 <div className="flex flex-wrap gap-1 mb-2">
-                  {tags.map((tag, i) => <TagChip key={`tag-${i}`} id={`tag-${i}`} tag={tag} onRemove={() => handleRemoveTag(i)} />)}
+                  {tags.map((tag, i) =>
+                    editingTagIdx === i ? (
+                      <input
+                        key={`tag-${i}`}
+                        value={editTagValue}
+                        onChange={(e) => setEditTagValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            const trimmed = editTagValue.trim()
+                            const newTags = [...tags]
+                            newTags[i] = trimmed
+                            setCaption(newTags.join(', '))
+                            setDirty(true)
+                            setEditingTagIdx(null)
+                          }
+                          if (e.key === 'Escape') setEditingTagIdx(null)
+                        }}
+                        onBlur={() => setEditingTagIdx(null)}
+                        autoFocus
+                        className="inline-flex px-2 py-0.5 rounded-md text-xs font-mono border border-cyano bg-coal-900 text-paper outline-none w-32"
+                      />
+                    ) : (
+                      <TagChip key={`tag-${i}`} id={`tag-${i}`} tag={tag} onRemove={() => handleRemoveTag(i)} onEdit={() => { setEditingTagIdx(i); setEditTagValue(tag) }} />
+                    )
+                  )}
                 </div>
               </SortableContext>
             </DndContext>

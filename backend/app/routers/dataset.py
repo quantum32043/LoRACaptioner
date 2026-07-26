@@ -1,0 +1,38 @@
+from fastapi import APIRouter, HTTPException
+from pathlib import Path
+from app.models import BatchRequest, ItemsResponse, Stats, StatusResponse, BatchResponse, RescanResponse
+from app.services.dataset import dataset_service
+from app.config import settings
+from app.utils import safe_join
+
+router = APIRouter(prefix="/dataset")
+
+@router.get("/items")
+async def get_items(offset: int = 0, limit: int = 20000, only_untagged: bool = False, search: str | None = None) -> ItemsResponse:
+    items, total = dataset_service.get_items(offset=offset, limit=limit, only_untagged=only_untagged, search=search)
+    return ItemsResponse(items=items, total=total)
+
+@router.get("/stats")
+async def get_stats() -> Stats:
+    return Stats(**dataset_service.get_stats())
+
+@router.put("/caption")
+async def save_caption(filename: str, caption: str) -> StatusResponse:
+    safe_join(settings.dataset_path, filename)
+    if not (Path(settings.dataset_path) / filename).exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    await dataset_service.save_caption(filename, caption)
+    return StatusResponse(status="ok")
+
+@router.post("/batch")
+async def batch_operation(body: BatchRequest) -> BatchResponse:
+    result = await dataset_service.batch(
+        op=body.op, value=body.value, value2=body.value2,
+        filenames=body.filenames, only_untagged=body.only_untagged,
+    )
+    return BatchResponse(**result)
+
+@router.post("/rescan")
+async def rescan() -> RescanResponse:
+    total = dataset_service.rescan()
+    return RescanResponse(status="ok", total=total)

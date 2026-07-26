@@ -1,11 +1,18 @@
-import { useRef } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { RotateCw, FolderUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '../api/client'
+import { useDatasetStore } from '../store/useDatasetStore'
+
+const CHUNK_SIZE = 20
 
 export default function TopBar() {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState({ current: 0, total: 0 })
+  const setItems = useDatasetStore((s) => s.setItems)
+
   const { data: stats, refetch } = useQuery({
     queryKey: ['stats'],
     queryFn: api.getStats,
@@ -26,19 +33,40 @@ export default function TopBar() {
     onSuccess: () => refetch(),
   })
 
-  const { mutate: doUpload, isPending: uploading } = useMutation({
-    mutationFn: (files: FileList) => api.uploadFolder(files),
-    onSuccess: (data) => {
-      toast.success(`Загружено ${data.saved} файлов. Всего в датасете: ${data.total}`)
-      refetch()
-    },
-    onError: () => toast.error('Ошибка при загрузке папки'),
-  })
+  const handleFolderPick = useCallback(async () => {
+    const fileList = inputRef.current?.files
+    if (!fileList || fileList.length === 0) return
 
-  const handleFolderPick = () => {
-    const files = inputRef.current?.files
-    if (files && files.length > 0) doUpload(files)
-  }
+    const files = Array.from(fileList)
+    setUploading(true)
+    setProgress({ current: 0, total: files.length })
+
+    let totalSaved = 0
+    for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+      const chunk = files.slice(i, i + CHUNK_SIZE)
+      const form = new FormData()
+      chunk.forEach((f) => form.append('files', f))
+
+      try {
+        const res = await fetch('/api/dataset/upload-folder', { method: 'POST', body: form })
+        const data = await res.json()
+        totalSaved += data.saved || 0
+      } catch {
+        toast.error(`Ошибка при загрузке файлов ${i + 1}-${i + chunk.length}`)
+      }
+
+      setProgress({ current: Math.min(i + CHUNK_SIZE, files.length), total: files.length })
+    }
+
+    const newData = await api.rescan()
+    const itemsData = await api.getItems()
+    setItems(itemsData.items, itemsData.total)
+    refetch()
+    setUploading(false)
+    toast.success(`Загружено ${totalSaved} файлов. Всего в датасете: ${newData.total}`)
+  }, [refetch, setItems])
+
+  const progressText = uploading ? `${progress.current}/${progress.total}` : ''
 
   return (
     <header className="flex items-center justify-between px-4 h-14 border-b border-coal-700 bg-coal-900">
@@ -76,7 +104,7 @@ export default function TopBar() {
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-safe hover:text-safe/80 border border-safe/40 rounded-md disabled:opacity-50"
         >
           <FolderUp size={14} className={uploading ? 'animate-pulse' : ''} />
-          {uploading ? '...' : 'Выбрать папку'}
+          {uploading ? progressText : 'Выбрать папку'}
         </button>
 
         <button

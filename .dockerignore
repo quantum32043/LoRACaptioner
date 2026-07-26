@@ -1,0 +1,9 @@
+node_modules/
+venv/
+dataset/
+thumb_cache/
+__pycache__/
+*.pyc
+.git/
+*.md
+.error.md

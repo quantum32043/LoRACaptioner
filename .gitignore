@@ -7,7 +7,7 @@ __pycache__/
 *.egg-info/
 .DS_Store
 thumb_cache/
-PLAN.md
-Requirements.txt
-Commit.md
+/PLAN.md
+/Requirements.txt
+/Commit.md
 venv/

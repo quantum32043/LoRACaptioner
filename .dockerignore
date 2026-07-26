@@ -2,6 +2,7 @@ node_modules/
 venv/
 dataset/
 thumb_cache/
+dist/
 __pycache__/
 *.pyc
 .git/

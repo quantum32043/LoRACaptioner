@@ -25,8 +25,8 @@ export default function TopBar() {
   const pct = total > 0 ? Math.floor((tagged / total) * 100) : 0
 
   const segments = 20
-  const filled = Math.floor((tagged / Math.max(total, 1)) * segments)
-  const cyanoStart = pct >= 100 ? 0 : Math.floor(segments * 0.7)
+  const filled = Math.round((tagged / Math.max(total, 1)) * segments)
+  const cyanoStart = filled >= segments ? 0 : Math.floor(segments * 0.7)
 
   const { mutate: doRescan, isPending: rescanning } = useMutation({
     mutationFn: api.rescan,

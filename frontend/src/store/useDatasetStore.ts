@@ -8,12 +8,14 @@ interface DatasetState {
   selectedFilenames: string[]
   filterUntagged: boolean
   searchQuery: string
+  panelOpen: boolean
   setItems: (items: Item[], total: number) => void
   setSelected: (filename: string | null) => void
   toggleSelection: (filename: string) => void
   clearSelection: () => void
   setFilterUntagged: (v: boolean) => void
   setSearchQuery: (q: string) => void
+  setPanelOpen: (open: boolean) => void
   updateItem: (filename: string, caption: string) => void
 }
 
@@ -24,6 +26,7 @@ export const useDatasetStore = create<DatasetState>((set) => ({
   selectedFilenames: [],
   filterUntagged: false,
   searchQuery: '',
+  panelOpen: false,
   setItems: (items, total) => set({ items, total }),
   setSelected: (filename) => set({ selectedFilename: filename, selectedFilenames: [] }),
   toggleSelection: (filename) =>
@@ -38,6 +41,7 @@ export const useDatasetStore = create<DatasetState>((set) => ({
   clearSelection: () => set({ selectedFilenames: [] }),
   setFilterUntagged: (v) => set({ filterUntagged: v }),
   setSearchQuery: (q) => set({ searchQuery: q }),
+  setPanelOpen: (open) => set({ panelOpen: open }),
   updateItem: (filename, caption) =>
     set((state) => ({
       items: state.items.map((item) =>

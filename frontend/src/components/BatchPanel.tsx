@@ -41,7 +41,7 @@ export default function BatchPanel() {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={op === 'regex_replace' ? 'шаблон...' : 'значение...'}
-          className="bg-coal-800 text-paper text-sm border border-coal-600 rounded-md px-2 py-1.5 font-mono flex-1 min-w-[200px] placeholder-paper-faint"
+          className="bg-coal-800 text-paper text-sm border border-coal-600 rounded-md px-2 py-1.5 font-mono flex-1 min-w-40 placeholder-paper-faint"
         />
 
         {op === 'regex_replace' && (
@@ -50,7 +50,7 @@ export default function BatchPanel() {
             value={value2}
             onChange={(e) => setValue2(e.target.value)}
             placeholder="замена..."
-            className="bg-coal-800 text-paper text-sm border border-coal-600 rounded-md px-2 py-1.5 font-mono flex-1 min-w-[150px] placeholder-paper-faint"
+            className="bg-coal-800 text-paper text-sm border border-coal-600 rounded-md px-2 py-1.5 font-mono flex-1 min-w-32 placeholder-paper-faint"
           />
         )}
 

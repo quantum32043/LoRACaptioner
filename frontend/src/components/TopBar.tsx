@@ -69,31 +69,31 @@ export default function TopBar() {
   const progressText = uploading ? `${progress.current}/${progress.total}` : ''
 
   return (
-    <header className="flex items-center justify-between px-4 h-14 border-b border-coal-700 bg-coal-900">
-      <div className="flex items-center gap-3">
-        <h1 className="font-display text-lg tracking-wider text-safe">LoRA Captioner</h1>
-        <span className="text-paper-faint text-xs font-mono uppercase tracking-widest">v1.0</span>
+    <header className="flex items-center justify-between gap-2 px-3 md:px-4 h-14 border-b border-coal-700 bg-coal-900">
+      <div className="flex items-center gap-2 md:gap-3 min-w-0">
+        <h1 className="font-display text-sm md:text-lg tracking-wider text-safe truncate">LoRA Captioner</h1>
+        <span className="text-paper-faint text-xs font-mono uppercase tracking-widest hidden sm:inline">v1.0</span>
       </div>
 
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-4 text-sm font-mono">
+      <div className="flex items-center gap-2 md:gap-4 shrink-0">
+        <div className="hidden md:flex items-center gap-4 text-sm font-mono">
           <span className="text-paper-muted">{total}</span>
           <span className="text-cyano">{tagged}</span>
           <span className="text-safe">{untagged}</span>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="hidden sm:flex items-center gap-1">
           {Array.from({ length: segments }).map((_, i) => (
             <div
               key={i}
-              className={`h-2 w-2 rounded-sm transition-colors ${
+              className={`h-2 w-1.5 md:w-2 rounded-sm transition-colors ${
                 i < filled
                   ? i >= cyanoStart ? 'bg-cyano' : 'bg-safe'
                   : 'bg-coal-600'
               }`}
             />
           ))}
-          <span className="text-xs font-mono text-paper-muted ml-1 w-8">{pct}%</span>
+          <span className="text-xs font-mono text-paper-muted ml-1 w-6 md:w-8 text-right">{pct}%</span>
         </div>
 
         <input ref={inputRef} type="file" {...{ webkitdirectory: '' }} multiple className="hidden" onChange={handleFolderPick} />
@@ -101,19 +101,19 @@ export default function TopBar() {
         <button
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-safe hover:text-safe/80 border border-safe/40 rounded-md disabled:opacity-50"
+          className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-safe hover:text-safe/80 border border-safe/40 rounded-md disabled:opacity-50"
         >
           <FolderUp size={14} className={uploading ? 'animate-pulse' : ''} />
-          {uploading ? progressText : 'Выбрать папку'}
+          <span className="hidden md:inline">{uploading ? progressText : 'Выбрать папку'}</span>
         </button>
 
         <button
           onClick={() => doRescan()}
           disabled={rescanning}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-paper-muted hover:text-paper border border-coal-600 rounded-md disabled:opacity-50"
+          className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-paper-muted hover:text-paper border border-coal-600 rounded-md disabled:opacity-50"
         >
           <RotateCw size={14} className={rescanning ? 'animate-spin' : ''} />
-          Рескан
+          <span className="hidden md:inline">Рескан</span>
         </button>
       </div>
     </header>

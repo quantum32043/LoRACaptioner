@@ -4,7 +4,7 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Save, Type } from 'lucide-react'
+import { Save, Type, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '../api/client'
 import { useDatasetStore } from '../store/useDatasetStore'
@@ -26,6 +26,7 @@ export default function EditorPanel() {
   const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
   const setSelected = useDatasetStore((s) => s.setSelected)
   const clearSelection = useDatasetStore((s) => s.clearSelection)
+  const setPanelOpen = useDatasetStore((s) => s.setPanelOpen)
   const updateItem = useDatasetStore((s) => s.updateItem)
   const total = useDatasetStore((s) => s.total)
 
@@ -116,30 +117,34 @@ export default function EditorPanel() {
 
   if (!isBatch && !selectedItem) {
     return (
-      <aside className="w-[440px] border-l border-coal-700 bg-coal-900 flex items-center justify-center">
+      <aside className="w-full md:w-80 lg:w-96 xl:w-[440px] border-l border-coal-700 bg-coal-900 flex items-center justify-center">
         <div className="text-center px-8">
           <p className="font-mono text-sm text-paper-muted mb-2">Выберите кадр</p>
-          <p className="font-mono text-[10px] text-paper-faint">Кликните на изображение в сетке</p>
-          <p className="font-mono text-[10px] text-paper-faint mt-1"><kbd className="border border-coal-600 px-1 rounded">←</kbd> <kbd className="border border-coal-600 px-1 rounded">→</kbd> навигация</p>
+          <p className="font-mono text-xs text-paper-faint">Кликните на изображение в сетке</p>
+          <p className="font-mono text-xs text-paper-faint mt-1"><kbd className="border border-coal-600 px-1 rounded">←</kbd> <kbd className="border border-coal-600 px-1 rounded">→</kbd> навигация</p>
         </div>
       </aside>
     )
   }
 
   return (
-    <aside className="w-[440px] border-l border-coal-700 bg-coal-900 flex flex-col overflow-hidden">
+    <aside className="w-full md:w-80 lg:w-96 xl:w-[440px] border-l border-coal-700 bg-coal-900 flex flex-col overflow-hidden">
       {isBatch ? (
-        <div className="px-4 py-2 border-b border-coal-700 flex items-center justify-between">
-          <span className="font-mono text-xs text-cyano">выбрано {selectedFilenames.length} / {total}</span>
-          <div className="flex items-center gap-2">
+        <div className="px-4 py-2 border-b border-coal-700 flex items-center justify-between gap-2">
+          <span className="font-mono text-xs text-cyano truncate">выбрано {selectedFilenames.length} / {total}</span>
+          <div className="flex items-center gap-2 shrink-0">
             <button onClick={handleSave} disabled={batchSaving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{batchSaving ? '...' : 'Сохранить всем'}</button>
             <button onClick={clearSelection} className="text-xs font-mono text-paper-faint hover:text-paper border border-coal-600 px-2 py-0.5 rounded-md">Снять</button>
+            <button onClick={() => setPanelOpen(false)} className="text-paper-faint hover:text-paper md:hidden"><X size={16} /></button>
           </div>
         </div>
       ) : (
-        <div className="px-4 py-2 border-b border-coal-700 flex items-center justify-between">
-          <span className="font-mono text-xs text-paper-muted">кадр {selectedIdx + 1} / {total}</span>
-          <div className="flex items-center gap-2">
+        <div className="px-4 py-2 border-b border-coal-700 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <button onClick={() => setPanelOpen(false)} className="text-paper-faint hover:text-paper md:hidden shrink-0"><X size={16} /></button>
+            <span className="font-mono text-xs text-paper-muted truncate">кадр {selectedIdx + 1} / {total}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             <span className={`w-2 h-2 rounded-full ${dirty ? 'bg-safe animate-pulse shadow-[0_0_6px_#f5a02c]' : 'bg-cyano'}`} />
             <button onClick={() => setTagMode(!tagMode)} className="text-paper-faint hover:text-paper"><Type size={16} /></button>
             <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{saving ? '...' : 'Сохранить'}</button>
@@ -151,13 +156,13 @@ export default function EditorPanel() {
         <div className="flex-1 flex items-center justify-center bg-coal-950 px-4">
           <div className="text-center">
             <p className="font-mono text-sm text-cyano mb-1">{selectedFilenames.length} кадров</p>
-            <p className="font-mono text-[10px] text-paper-faint">Массовое редактирование</p>
+            <p className="font-mono text-xs text-paper-faint">Массовое редактирование</p>
           </div>
         </div>
       ) : (
         <>
           <div className="px-4 py-2 border-b border-coal-700">
-            <p className="font-mono text-[10px] text-paper-faint">{selectedItem!.filename}</p>
+            <p className="font-mono text-xs text-paper-faint truncate">{selectedItem!.filename}</p>
           </div>
 
           <div className="flex-1 overflow-hidden bg-coal-950 relative">

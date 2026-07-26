@@ -13,6 +13,8 @@ import StatusStrip from './components/StatusStrip'
 function App() {
   const [batchOpen, setBatchOpen] = useState(false)
   const setItems = useDatasetStore((s) => s.setItems)
+  const panelOpen = useDatasetStore((s) => s.panelOpen)
+  const setPanelOpen = useDatasetStore((s) => s.setPanelOpen)
   const filterUntagged = useDatasetStore((s) => s.filterUntagged)
   const searchQuery = useDatasetStore((s) => s.searchQuery)
 
@@ -34,11 +36,21 @@ function App() {
       <Toolbar onToggleBatch={() => setBatchOpen(!batchOpen)} />
       {batchOpen && <BatchPanel />}
       <div className="flex flex-1 overflow-hidden relative z-10">
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden min-w-0">
           <ImageGrid />
           <StatusStrip />
         </div>
-        <EditorPanel />
+
+        {panelOpen && (
+          <div className="fixed inset-0 bg-black/50 z-20 md:hidden" onClick={() => setPanelOpen(false)} />
+        )}
+
+        <div className={`
+          ${panelOpen ? 'fixed inset-y-0 right-0 z-30 w-full max-w-lg shadow-2xl' : 'hidden'}
+          md:relative md:flex md:w-80 lg:w-96 xl:w-[440px]
+        `}>
+          <EditorPanel />
+        </div>
       </div>
       <Toaster position="bottom-right" toastOptions={{ style: { background: '#1c1815', color: '#ece5d8', border: '1px solid #2e2822' } }} />
     </div>

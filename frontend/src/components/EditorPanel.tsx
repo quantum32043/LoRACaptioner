@@ -35,6 +35,7 @@ export default function EditorPanel() {
   const [tagMode, setTagMode] = useState(true)
   const [dirty, setDirty] = useState(false)
   const [batchMode, setBatchMode] = useState<'append' | 'prepend' | 'set'>('append')
+  const [removedTags, setRemovedTags] = useState<string[]>([])
   const isBatch = selectedFilenames.length > 0
 
   const selectedItems = items.filter((i) => selectedFilenames.includes(i.filename))
@@ -50,6 +51,7 @@ export default function EditorPanel() {
       setCaption('')
       setDirty(false)
       setTagMode(false)
+      setRemovedTags([])
     } else if (selectedItem) {
       setCaption(selectedItem.caption)
       setDirty(false)
@@ -70,10 +72,12 @@ export default function EditorPanel() {
   })
 
   const { mutate: batchSave, isPending: batchSaving } = useMutation({
-    mutationFn: async ({ filenames, caption, mode }: { filenames: string[]; caption: string; mode: 'append' | 'prepend' | 'set' }) => {
+    mutationFn: async ({ filenames, caption, mode, remove }: { filenames: string[]; caption: string; mode: 'append' | 'prepend' | 'set'; remove: string[] }) => {
       for (const fn of filenames) {
         const item = items.find((i) => i.filename === fn)
-        const existing = item?.caption || ''
+        const existingTags = (item?.caption || '').split(',').map((t) => t.trim()).filter(Boolean)
+        const filtered = existingTags.filter((t) => !remove.includes(t))
+        const existing = filtered.join(', ')
         let newCaption: string
         if (mode === 'set') {
           newCaption = caption
@@ -98,7 +102,7 @@ export default function EditorPanel() {
 
   const handleSave = () => {
     if (isBatch) {
-      batchSave({ filenames: selectedFilenames, caption, mode: batchMode })
+      batchSave({ filenames: selectedFilenames, caption, mode: batchMode, remove: removedTags })
     } else if (selectedItem) {
       save({ filename: selectedItem.filename, caption })
     }
@@ -179,14 +183,36 @@ export default function EditorPanel() {
             <div className="mb-3">
               <p className="font-mono text-xs text-paper-faint mb-1.5">Общие теги ({commonTags.length}):</p>
               <div className="flex flex-wrap gap-1">
-                {commonTags.map((tag, i) => (
-                  <span key={i} className="inline-flex px-2 py-0.5 bg-coal-800 text-paper-muted rounded-md text-xs font-mono border border-coal-600">
-                    {tag}
-                  </span>
-                ))}
+                {commonTags.map((tag, i) => {
+                  const isRemoved = removedTags.includes(tag)
+                  return (
+                    <span
+                      key={i}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono border cursor-pointer transition-colors ${
+                        isRemoved
+                          ? 'bg-coal-900 text-paper-faint/50 border-coal-700 line-through'
+                          : 'bg-coal-800 text-paper-muted border-coal-600 hover:bg-ember/20 hover:border-ember/50'
+                      }`}
+                      onClick={() => {
+                        setRemovedTags((prev) =>
+                          isRemoved ? prev.filter((t) => t !== tag) : [...prev, tag]
+                        )
+                        setDirty(true)
+                      }}
+                    >
+                      {tag}
+                      <span className={`ml-0.5 ${isRemoved ? 'text-paper-faint/30' : 'text-paper-faint hover:text-ember'}`}>
+                        {isRemoved ? '↩' : '×'}
+                      </span>
+                    </span>
+                  )
+                })}
               </div>
               {differingCount > 0 && (
                 <p className="font-mono text-xs text-paper-faint mt-1.5">...и ещё {differingCount} тегов различаются</p>
+              )}
+              {removedTags.length > 0 && (
+                <p className="font-mono text-xs text-ember mt-1.5">Будут удалены: {removedTags.join(', ')}</p>
               )}
             </div>
           )}

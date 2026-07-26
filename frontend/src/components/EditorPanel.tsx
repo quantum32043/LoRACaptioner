@@ -34,7 +34,16 @@ export default function EditorPanel() {
   const [caption, setCaption] = useState('')
   const [tagMode, setTagMode] = useState(true)
   const [dirty, setDirty] = useState(false)
+  const [batchMode, setBatchMode] = useState<'append' | 'prepend' | 'set'>('append')
   const isBatch = selectedFilenames.length > 0
+
+  const selectedItems = items.filter((i) => selectedFilenames.includes(i.filename))
+  const allTagSets = selectedItems.map((i) => new Set(i.caption.split(',').map((t) => t.trim()).filter(Boolean)))
+  const commonTags = allTagSets.length > 0
+    ? Array.from(allTagSets[0]).filter((tag) => allTagSets.every((set) => set.has(tag)))
+    : []
+  const totalUniqueTags = new Set(allTagSets.flatMap((s) => Array.from(s)))
+  const differingCount = totalUniqueTags.size - commonTags.length
 
   useEffect(() => {
     if (isBatch) {
@@ -61,14 +70,26 @@ export default function EditorPanel() {
   })
 
   const { mutate: batchSave, isPending: batchSaving } = useMutation({
-    mutationFn: async ({ filenames, caption }: { filenames: string[]; caption: string }) => {
+    mutationFn: async ({ filenames, caption, mode }: { filenames: string[]; caption: string; mode: 'append' | 'prepend' | 'set' }) => {
       for (const fn of filenames) {
-        await api.saveCaption(fn, caption)
+        const item = items.find((i) => i.filename === fn)
+        const existing = item?.caption || ''
+        let newCaption: string
+        if (mode === 'set') {
+          newCaption = caption
+        } else if (!existing) {
+          newCaption = caption
+        } else if (mode === 'prepend') {
+          newCaption = `${caption}, ${existing}`
+        } else {
+          newCaption = existing ? `${existing}, ${caption}` : caption
+        }
+        await api.saveCaption(fn, newCaption)
       }
     },
-    onSuccess: (_, { filenames, caption }) => {
+    onSuccess: (_, { filenames }) => {
       setDirty(false)
-      filenames.forEach((fn) => updateItem(fn, caption))
+      queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['stats'] })
       toast.success(`Сохранено для ${filenames.length} кадров`)
     },
@@ -77,7 +98,7 @@ export default function EditorPanel() {
 
   const handleSave = () => {
     if (isBatch) {
-      batchSave({ filenames: selectedFilenames, caption })
+      batchSave({ filenames: selectedFilenames, caption, mode: batchMode })
     } else if (selectedItem) {
       save({ filename: selectedItem.filename, caption })
     }
@@ -109,7 +130,7 @@ export default function EditorPanel() {
     if (isBatch) return
     if (e.key === 'ArrowLeft' && document.activeElement?.tagName !== 'INPUT') handlePrev()
     if (e.key === 'ArrowRight' && document.activeElement?.tagName !== 'INPUT') handleNext()
-  }, [selectedIdx, items, caption, isBatch])
+  }, [selectedIdx, items, caption, isBatch, batchMode])
 
   useEffect(() => { window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown) }, [handleKeyDown])
 
@@ -153,11 +174,27 @@ export default function EditorPanel() {
       )}
 
       {isBatch ? (
-        <div className="flex-1 flex items-center justify-center bg-coal-950 px-4">
-          <div className="text-center">
-            <p className="font-mono text-sm text-cyano mb-1">{selectedFilenames.length} кадров</p>
-            <p className="font-mono text-xs text-paper-faint">Массовое редактирование</p>
-          </div>
+        <div className="flex-1 overflow-y-auto bg-coal-950 px-4 py-3">
+          {commonTags.length > 0 && (
+            <div className="mb-3">
+              <p className="font-mono text-xs text-paper-faint mb-1.5">Общие теги ({commonTags.length}):</p>
+              <div className="flex flex-wrap gap-1">
+                {commonTags.map((tag, i) => (
+                  <span key={i} className="inline-flex px-2 py-0.5 bg-coal-800 text-paper-muted rounded-md text-xs font-mono border border-coal-600">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              {differingCount > 0 && (
+                <p className="font-mono text-xs text-paper-faint mt-1.5">...и ещё {differingCount} тегов различаются</p>
+              )}
+            </div>
+          )}
+          {commonTags.length === 0 && differingCount === 0 && (
+            <div className="flex items-center justify-center h-full">
+              <p className="font-mono text-xs text-paper-faint">У выбранных кадров нет капшенов</p>
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -180,8 +217,21 @@ export default function EditorPanel() {
       )}
 
       <div className="px-4 py-3 border-t border-coal-700">
-        <div className="flex items-center justify-between mb-2">
-          {isBatch && <span className="font-mono text-xs text-cyano">Установить капшен для {selectedFilenames.length} кадров</span>}
+        <div className="flex items-center gap-2 mb-2">
+          {isBatch && (
+            <>
+              <select
+                value={batchMode}
+                onChange={(e) => setBatchMode(e.target.value as 'append' | 'prepend' | 'set')}
+                className="bg-coal-800 text-paper text-xs font-mono border border-coal-600 rounded-md px-2 py-1"
+              >
+                <option value="append">В конец</option>
+                <option value="prepend">В начало</option>
+                <option value="set">Заменить</option>
+              </select>
+              <span className="font-mono text-xs text-paper-faint">для {selectedFilenames.length} кадров</span>
+            </>
+          )}
         </div>
         {tagMode && !isBatch ? (
           <div>

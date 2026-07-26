@@ -83,16 +83,17 @@ export default function EditorPanel() {
         const item = items.find((i) => i.filename === fn)
         const existingTags = (item?.caption || '').split(',').map((t) => t.trim()).filter(Boolean)
         const filtered = existingTags.filter((t) => !remove.includes(t))
-        const existing = filtered.join(', ')
+        const newTags = caption.split(',').map((t) => t.trim()).filter(Boolean)
+        const uniqueNew = newTags.filter((t) => !filtered.includes(t))
         let newCaption: string
         if (mode === 'set') {
           newCaption = caption
-        } else if (!existing) {
-          newCaption = caption
+        } else if (!filtered.length) {
+          newCaption = uniqueNew.join(', ')
         } else if (mode === 'prepend') {
-          newCaption = `${caption}, ${existing}`
+          newCaption = uniqueNew.length ? `${uniqueNew.join(', ')}, ${filtered.join(', ')}` : filtered.join(', ')
         } else {
-          newCaption = existing ? `${existing}, ${caption}` : caption
+          newCaption = uniqueNew.length ? `${filtered.join(', ')}, ${uniqueNew.join(', ')}` : filtered.join(', ')
         }
         await api.saveCaption(fn, newCaption)
       }

@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api, type BatchRequest } from '../api/client'
 
 export default function BatchPanel() {
+  const queryClient = useQueryClient()
   const [op, setOp] = useState<BatchRequest['op']>('prepend')
   const [value, setValue] = useState('')
   const [value2, setValue2] = useState('')
@@ -13,6 +14,8 @@ export default function BatchPanel() {
     mutationFn: (body: BatchRequest) => api.batch(body),
     onSuccess: (data) => {
       toast.success(`Изменено файлов: ${data.changed} из ${data.total}`)
+      queryClient.invalidateQueries({ queryKey: ['items'] })
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
     },
     onError: () => toast.error('Ошибка при выполнении операции'),
   })

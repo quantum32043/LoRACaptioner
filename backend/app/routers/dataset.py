@@ -30,10 +30,10 @@ async def upload_folder(files: list[UploadFile] = File(...)) -> dict:
     for f in files:
         if not f.filename:
             continue
-        safe_join(settings.dataset_path, f.filename)
+        flat = Path(f.filename).name
+        safe_join(settings.dataset_path, flat)
         data = await f.read()
-        dest = Path(settings.dataset_path) / f.filename
-        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest = Path(settings.dataset_path) / flat
         with open(dest, "wb") as out:
             out.write(data)
         saved += 1

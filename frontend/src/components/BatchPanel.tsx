@@ -1,0 +1,72 @@
+import { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { api, type BatchRequest } from '../api/client'
+
+export default function BatchPanel() {
+  const [op, setOp] = useState<BatchRequest['op']>('prepend')
+  const [value, setValue] = useState('')
+  const [value2, setValue2] = useState('')
+  const [onlyUntagged, setOnlyUntagged] = useState(false)
+
+  const { mutate: runBatch, isPending } = useMutation({
+    mutationFn: (body: BatchRequest) => api.batch(body),
+    onSuccess: (data) => {
+      toast.success(`Изменено файлов: ${data.changed} из ${data.total}`)
+    },
+    onError: () => toast.error('Ошибка при выполнении операции'),
+  })
+
+  const handleApply = () => {
+    if (!value.trim()) return
+    runBatch({ op, value: value.trim(), value2: value2.trim() || undefined, only_untagged: onlyUntagged })
+  }
+
+  return (
+    <div className="px-4 py-3 border-b border-coal-700 bg-coal-850">
+      <div className="flex items-center gap-3 flex-wrap">
+        <select
+          value={op}
+          onChange={(e) => setOp(e.target.value as BatchRequest['op'])}
+          className="bg-coal-800 text-paper text-sm border border-coal-600 rounded-md px-2 py-1.5 font-mono"
+        >
+          <option value="prepend">В начало</option>
+          <option value="append">В конец</option>
+          <option value="remove_tag">Удалить тег</option>
+          <option value="regex_replace">Regex замена</option>
+        </select>
+
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={op === 'regex_replace' ? 'шаблон...' : 'значение...'}
+          className="bg-coal-800 text-paper text-sm border border-coal-600 rounded-md px-2 py-1.5 font-mono flex-1 min-w-[200px] placeholder-paper-faint"
+        />
+
+        {op === 'regex_replace' && (
+          <input
+            type="text"
+            value={value2}
+            onChange={(e) => setValue2(e.target.value)}
+            placeholder="замена..."
+            className="bg-coal-800 text-paper text-sm border border-coal-600 rounded-md px-2 py-1.5 font-mono flex-1 min-w-[150px] placeholder-paper-faint"
+          />
+        )}
+
+        <label className="flex items-center gap-1.5 text-xs font-mono text-paper-muted cursor-pointer">
+          <input type="checkbox" checked={onlyUntagged} onChange={(e) => setOnlyUntagged(e.target.checked)} className="accent-safe" />
+          только пустые
+        </label>
+
+        <button
+          onClick={handleApply}
+          disabled={!value.trim() || isPending}
+          className="px-4 py-1.5 text-xs font-mono uppercase tracking-wider bg-safe text-coal-950 rounded-md font-semibold disabled:opacity-50"
+        >
+          {isPending ? '...' : 'Применить'}
+        </button>
+      </div>
+    </div>
+  )
+}

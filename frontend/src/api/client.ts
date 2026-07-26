@@ -54,6 +54,12 @@ export const api = {
     return fetchJson<{ status: string }>(`/dataset/caption?${params}`, { method: 'PUT' })
   },
 
+  uploadFolder(files: FileList): Promise<{ status: string; saved: number; total: number }> {
+    const form = new FormData()
+    Array.from(files).forEach((f) => form.append('files', f))
+    return fetchJson('/dataset/upload-folder', { method: 'POST', body: form })
+  },
+
   batch(body: BatchRequest) {
     return fetchJson<BatchResponse>('/dataset/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   },

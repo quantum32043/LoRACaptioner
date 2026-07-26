@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from pathlib import Path
 from app.models import BatchRequest, ItemsResponse, Stats, StatusResponse, BatchResponse, RescanResponse
 from app.services.dataset import dataset_service
@@ -23,6 +23,22 @@ async def save_caption(filename: str, caption: str) -> StatusResponse:
         raise HTTPException(status_code=404, detail="File not found")
     await dataset_service.save_caption(filename, caption)
     return StatusResponse(status="ok")
+
+@router.post("/upload-folder")
+async def upload_folder(files: list[UploadFile] = File(...)) -> dict:
+    saved = 0
+    for f in files:
+        if not f.filename:
+            continue
+        safe_join(settings.dataset_path, f.filename)
+        data = await f.read()
+        dest = Path(settings.dataset_path) / f.filename
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with open(dest, "wb") as out:
+            out.write(data)
+        saved += 1
+    total = dataset_service.rescan()
+    return {"status": "ok", "saved": saved, "total": total}
 
 @router.post("/batch")
 async def batch_operation(body: BatchRequest) -> BatchResponse:

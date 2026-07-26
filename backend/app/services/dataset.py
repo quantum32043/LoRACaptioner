@@ -94,6 +94,18 @@ class DatasetService:
             self._items[filename].caption = caption
             self._items[filename].tagged = bool(caption)
 
+    async def upload_files(self, files: list[tuple[str, bytes]]) -> int:
+        dataset_path = Path(settings.dataset_path)
+        dataset_path.mkdir(parents=True, exist_ok=True)
+        saved = 0
+        for filename, data in files:
+            safe_path = dataset_path / filename
+            async with aiofiles.open(safe_path, mode="wb") as f:
+                await f.write(data)
+            saved += 1
+        self._scan_dir()
+        return saved
+
     async def batch(self, op: str, value: str, value2: str | None = None, filenames: list[str] | None = None, only_untagged: bool = False) -> dict:
         self.ensure_scanned()
         changed = 0

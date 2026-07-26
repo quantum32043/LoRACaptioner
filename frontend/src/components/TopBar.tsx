@@ -22,10 +22,10 @@ export default function TopBar() {
   const total = stats?.total ?? 0
   const tagged = stats?.tagged ?? 0
   const untagged = stats?.untagged ?? 0
-  const pct = total > 0 ? Math.round((tagged / total) * 100) : 0
+  const pct = total > 0 ? Math.floor((tagged / total) * 100) : 0
 
   const segments = 20
-  const filled = Math.round((tagged / Math.max(total, 1)) * segments)
+  const filled = Math.floor((tagged / Math.max(total, 1)) * segments)
   const cyanoStart = pct >= 100 ? 0 : Math.floor(segments * 0.7)
 
   const { mutate: doRescan, isPending: rescanning } = useMutation({

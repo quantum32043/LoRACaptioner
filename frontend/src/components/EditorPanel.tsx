@@ -95,6 +95,7 @@ export default function EditorPanel() {
     },
     onSuccess: (_, { filenames }) => {
       setDirty(false)
+      setRemovedTags([])
       queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['stats'] })
       toast.success(`Сохранено для ${filenames.length} кадров`)

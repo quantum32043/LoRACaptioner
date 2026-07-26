@@ -1,15 +1,23 @@
 import { type Item } from '../api/client'
 
-export default function ImageCard({ item, index, isSelected, onSelect }: { item: Item; index: number; isSelected: boolean; onSelect: () => void }) {
+export default function ImageCard({ item, index, isSelected, isMultiSelected, onSelect }: { item: Item; index: number; isSelected: boolean; isMultiSelected: boolean; onSelect: (e: React.MouseEvent) => void }) {
   const num = item.filename.match(/\d+/)?.[0].padStart(4, '0') || '0000'
+  const borderClass = isMultiSelected
+    ? 'border-cyano ring-1 ring-cyano/50'
+    : isSelected
+      ? 'border-safe ring-1 ring-safe/50 translate-y-[-2px]'
+      : 'border-coal-700 hover:border-coal-500'
   return (
     <button
       onClick={onSelect}
-      className={`group relative flex flex-col rounded-md overflow-hidden border transition-all stagger-fade-up ${
-        isSelected ? 'border-safe ring-1 ring-safe/50 translate-y-[-2px]' : 'border-coal-700 hover:border-coal-500'
-      }`}
+      className={`group relative flex flex-col rounded-md overflow-hidden border transition-all stagger-fade-up ${borderClass}`}
       style={{ animationDelay: `${(index % 20) * 30}ms` }}
     >
+      {isMultiSelected && (
+        <div className="absolute top-2 right-2 z-10 w-5 h-5 bg-cyano rounded-full flex items-center justify-center shadow-lg">
+          <span className="text-coal-950 text-xs font-bold leading-none">&#10003;</span>
+        </div>
+      )}
       <div className="h-6 bg-coal-800 flex items-center px-2 border-b border-coal-700">
         <span className="font-mono text-xs uppercase tracking-wider text-paper-faint group-hover:text-safe transition-colors">FR·{num}</span>
       </div>

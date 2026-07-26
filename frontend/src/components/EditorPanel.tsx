@@ -23,7 +23,9 @@ function TagChip({ tag, onRemove, id }: { tag: string; onRemove: () => void; id:
 export default function EditorPanel() {
   const items = useDatasetStore((s) => s.items)
   const selectedFilename = useDatasetStore((s) => s.selectedFilename)
+  const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
   const setSelected = useDatasetStore((s) => s.setSelected)
+  const clearSelection = useDatasetStore((s) => s.clearSelection)
   const updateItem = useDatasetStore((s) => s.updateItem)
   const total = useDatasetStore((s) => s.total)
 
@@ -31,10 +33,18 @@ export default function EditorPanel() {
   const [caption, setCaption] = useState('')
   const [tagMode, setTagMode] = useState(true)
   const [dirty, setDirty] = useState(false)
+  const isBatch = selectedFilenames.length > 0
 
   useEffect(() => {
-    if (selectedItem) { setCaption(selectedItem.caption); setDirty(false) }
-  }, [selectedItem])
+    if (isBatch) {
+      setCaption('')
+      setDirty(false)
+      setTagMode(false)
+    } else if (selectedItem) {
+      setCaption(selectedItem.caption)
+      setDirty(false)
+    }
+  }, [isBatch, selectedItem])
 
   const selectedIdx = selectedItem ? items.indexOf(selectedItem) : -1
   const queryClient = useQueryClient()
@@ -49,7 +59,28 @@ export default function EditorPanel() {
     onError: () => toast.error('Ошибка сохранения'),
   })
 
-  const handleSave = () => { if (selectedItem) save({ filename: selectedItem.filename, caption }) }
+  const { mutate: batchSave, isPending: batchSaving } = useMutation({
+    mutationFn: async ({ filenames, caption }: { filenames: string[]; caption: string }) => {
+      for (const fn of filenames) {
+        await api.saveCaption(fn, caption)
+      }
+    },
+    onSuccess: (_, { filenames, caption }) => {
+      setDirty(false)
+      filenames.forEach((fn) => updateItem(fn, caption))
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+      toast.success(`Сохранено для ${filenames.length} кадров`)
+    },
+    onError: () => toast.error('Ошибка массового сохранения'),
+  })
+
+  const handleSave = () => {
+    if (isBatch) {
+      batchSave({ filenames: selectedFilenames, caption })
+    } else if (selectedItem) {
+      save({ filename: selectedItem.filename, caption })
+    }
+  }
 
   const handlePrev = () => { if (selectedIdx > 0) setSelected(items[selectedIdx - 1].filename) }
   const handleNext = () => { if (selectedIdx < items.length - 1) setSelected(items[selectedIdx + 1].filename) }
@@ -74,15 +105,16 @@ export default function EditorPanel() {
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); handleSave() }
+    if (isBatch) return
     if (e.key === 'ArrowLeft' && document.activeElement?.tagName !== 'INPUT') handlePrev()
     if (e.key === 'ArrowRight' && document.activeElement?.tagName !== 'INPUT') handleNext()
-  }, [selectedIdx, items, caption])
+  }, [selectedIdx, items, caption, isBatch])
 
   useEffect(() => { window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown) }, [handleKeyDown])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
-  if (!selectedItem) {
+  if (!isBatch && !selectedItem) {
     return (
       <aside className="w-[440px] border-l border-coal-700 bg-coal-900 flex items-center justify-center">
         <div className="text-center px-8">
@@ -96,33 +128,57 @@ export default function EditorPanel() {
 
   return (
     <aside className="w-[440px] border-l border-coal-700 bg-coal-900 flex flex-col overflow-hidden">
-      <div className="px-4 py-2 border-b border-coal-700 flex items-center justify-between">
-        <span className="font-mono text-xs text-paper-muted">кадр {selectedIdx + 1} / {total}</span>
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${dirty ? 'bg-safe animate-pulse shadow-[0_0_6px_#f5a02c]' : 'bg-cyano'}`} />
-          <button onClick={() => setTagMode(!tagMode)} className="text-paper-faint hover:text-paper"><Type size={16} /></button>
-          <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{saving ? '...' : 'Сохранить'}</button>
+      {isBatch ? (
+        <div className="px-4 py-2 border-b border-coal-700 flex items-center justify-between">
+          <span className="font-mono text-xs text-cyano">выбрано {selectedFilenames.length} / {total}</span>
+          <div className="flex items-center gap-2">
+            <button onClick={handleSave} disabled={batchSaving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{batchSaving ? '...' : 'Сохранить всем'}</button>
+            <button onClick={clearSelection} className="text-xs font-mono text-paper-faint hover:text-paper border border-coal-600 px-2 py-0.5 rounded-md">Снять</button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="px-4 py-2 border-b border-coal-700 flex items-center justify-between">
+          <span className="font-mono text-xs text-paper-muted">кадр {selectedIdx + 1} / {total}</span>
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${dirty ? 'bg-safe animate-pulse shadow-[0_0_6px_#f5a02c]' : 'bg-cyano'}`} />
+            <button onClick={() => setTagMode(!tagMode)} className="text-paper-faint hover:text-paper"><Type size={16} /></button>
+            <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{saving ? '...' : 'Сохранить'}</button>
+          </div>
+        </div>
+      )}
 
-      <div className="px-4 py-2 border-b border-coal-700">
-        <p className="font-mono text-[10px] text-paper-faint">{selectedItem.filename}</p>
-      </div>
+      {isBatch ? (
+        <div className="flex-1 flex items-center justify-center bg-coal-950 px-4">
+          <div className="text-center">
+            <p className="font-mono text-sm text-cyano mb-1">{selectedFilenames.length} кадров</p>
+            <p className="font-mono text-[10px] text-paper-faint">Массовое редактирование</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="px-4 py-2 border-b border-coal-700">
+            <p className="font-mono text-[10px] text-paper-faint">{selectedItem!.filename}</p>
+          </div>
 
-      <div className="flex-1 overflow-hidden bg-coal-950 relative">
-        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-safe/60 z-10" />
-        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-safe/60 z-10" />
-        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-safe/60 z-10" />
-        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-safe/60 z-10" />
-        <TransformWrapper>
-          <TransformComponent>
-            <img src={selectedItem.full_url} alt={selectedItem.filename} className="w-full h-full object-contain" />
-          </TransformComponent>
-        </TransformWrapper>
-      </div>
+          <div className="flex-1 overflow-hidden bg-coal-950 relative">
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-safe/60 z-10" />
+            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-safe/60 z-10" />
+            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-safe/60 z-10" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-safe/60 z-10" />
+            <TransformWrapper>
+              <TransformComponent>
+                <img src={selectedItem!.full_url} alt={selectedItem!.filename} className="w-full h-full object-contain" />
+              </TransformComponent>
+            </TransformWrapper>
+          </div>
+        </>
+      )}
 
       <div className="px-4 py-3 border-t border-coal-700">
-        {tagMode ? (
+        <div className="flex items-center justify-between mb-2">
+          {isBatch && <span className="font-mono text-xs text-cyano">Установить капшен для {selectedFilenames.length} кадров</span>}
+        </div>
+        {tagMode && !isBatch ? (
           <div>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => {
               const { active, over } = e

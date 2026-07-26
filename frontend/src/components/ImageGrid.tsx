@@ -7,6 +7,8 @@ export default function ImageGrid() {
   const items = useDatasetStore((s) => s.items)
   const setSelected = useDatasetStore((s) => s.setSelected)
   const selectedFilename = useDatasetStore((s) => s.selectedFilename)
+  const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
+  const toggleSelection = useDatasetStore((s) => s.toggleSelection)
   const parentRef = useRef<HTMLDivElement>(null)
 
   const cols = Math.max(2, Math.floor((parentRef.current?.clientWidth ?? 800) / 220))
@@ -46,7 +48,14 @@ export default function ImageGrid() {
                   item={item}
                   index={idx}
                   isSelected={item.filename === selectedFilename}
-                  onSelect={() => setSelected(item.filename)}
+                  isMultiSelected={selectedFilenames.includes(item.filename)}
+                  onSelect={(e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                      toggleSelection(item.filename)
+                    } else {
+                      setSelected(item.filename)
+                    }
+                  }}
                 />
               )
             })}

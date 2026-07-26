@@ -51,6 +51,9 @@ export default function ImageGrid() {
                   isMultiSelected={selectedFilenames.includes(item.filename)}
                   onSelect={(e) => {
                     if (e.ctrlKey || e.metaKey) {
+                      if (selectedFilename && selectedFilenames.length === 0) {
+                        toggleSelection(selectedFilename)
+                      }
                       toggleSelection(item.filename)
                     } else {
                       setSelected(item.filename)

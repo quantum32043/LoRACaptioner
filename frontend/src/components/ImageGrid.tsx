@@ -11,7 +11,7 @@ export default function ImageGrid() {
   const toggleSelection = useDatasetStore((s) => s.toggleSelection)
   const parentRef = useRef<HTMLDivElement>(null)
 
-  const cols = Math.max(2, Math.floor((parentRef.current?.clientWidth ?? 800) / 220))
+  const cols = Math.max(1, Math.floor((parentRef.current?.clientWidth ?? 800) / 220))
   const rows = Math.ceil(items.length / cols)
 
   const virtualizer = useVirtualizer({

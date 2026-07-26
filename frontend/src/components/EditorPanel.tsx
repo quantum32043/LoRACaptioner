@@ -36,6 +36,8 @@ export default function EditorPanel() {
   const [dirty, setDirty] = useState(false)
   const [batchMode, setBatchMode] = useState<'append' | 'prepend' | 'set'>('append')
   const [removedTags, setRemovedTags] = useState<string[]>([])
+  const [editingTag, setEditingTag] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
   const isBatch = selectedFilenames.length > 0
 
   const selectedItems = items.filter((i) => selectedFilenames.includes(i.filename))
@@ -98,6 +100,24 @@ export default function EditorPanel() {
       toast.success(`Сохранено для ${filenames.length} кадров`)
     },
     onError: () => toast.error('Ошибка массового сохранения'),
+  })
+
+  const { mutate: renameTag } = useMutation({
+    mutationFn: async ({ filenames, oldTag, newTag }: { filenames: string[]; oldTag: string; newTag: string }) => {
+      for (const fn of filenames) {
+        const item = items.find((i) => i.filename === fn)
+        const tags = (item?.caption || '').split(',').map((t) => t.trim()).filter(Boolean)
+        const updated = tags.map((t) => (t === oldTag ? newTag : t))
+        await api.saveCaption(fn, updated.join(', '))
+      }
+    },
+    onSuccess: () => {
+      setEditingTag(null)
+      queryClient.invalidateQueries({ queryKey: ['items'] })
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+      toast.success('Тег переименован')
+    },
+    onError: () => toast.error('Ошибка переименования'),
   })
 
   const handleSave = () => {
@@ -198,23 +218,62 @@ export default function EditorPanel() {
               <div className="flex flex-wrap gap-1">
                 {commonTags.map((tag, i) => {
                   const isRemoved = removedTags.includes(tag)
+                  const isEditing = editingTag === tag
+                  if (isEditing) {
+                    return (
+                      <input
+                        key={i}
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            const trimmed = editValue.trim()
+                            if (trimmed && trimmed !== tag) {
+                              renameTag({ filenames: selectedFilenames, oldTag: tag, newTag: trimmed })
+                            } else {
+                              setEditingTag(null)
+                            }
+                          }
+                          if (e.key === 'Escape') {
+                            setEditingTag(null)
+                          }
+                        }}
+                        onBlur={() => setEditingTag(null)}
+                        autoFocus
+                        className="inline-flex px-2 py-0.5 rounded-md text-xs font-mono border border-cyano bg-coal-900 text-paper outline-none w-32"
+                      />
+                    )
+                  }
                   return (
                     <span
                       key={i}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono border cursor-pointer transition-colors ${
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono border transition-colors ${
                         isRemoved
-                          ? 'bg-coal-900 text-paper-faint/50 border-coal-700 line-through'
-                          : 'bg-coal-800 text-paper-muted border-coal-600 hover:bg-ember/20 hover:border-ember/50'
+                          ? 'bg-coal-900 text-paper-faint/50 border-coal-700 line-through cursor-pointer'
+                          : 'bg-coal-800 text-paper-muted border-coal-600'
                       }`}
-                      onClick={() => {
-                        setRemovedTags((prev) =>
-                          isRemoved ? prev.filter((t) => t !== tag) : [...prev, tag]
-                        )
-                        setDirty(true)
-                      }}
                     >
-                      {tag}
-                      <span className={`ml-0.5 ${isRemoved ? 'text-paper-faint/30' : 'text-paper-faint hover:text-ember'}`}>
+                      <span
+                        className="cursor-pointer hover:text-paper"
+                        onClick={() => {
+                          if (!isRemoved) {
+                            setEditingTag(tag)
+                            setEditValue(tag)
+                          }
+                        }}
+                      >
+                        {tag}
+                      </span>
+                      <span
+                        className={`ml-0.5 cursor-pointer ${isRemoved ? 'text-paper-faint/30 hover:text-paper-faint' : 'text-paper-faint hover:text-ember'}`}
+                        onClick={() => {
+                          setRemovedTags((prev) =>
+                            isRemoved ? prev.filter((t) => t !== tag) : [...prev, tag]
+                          )
+                          setDirty(true)
+                        }}
+                      >
                         {isRemoved ? '↩' : '×'}
                       </span>
                     </span>

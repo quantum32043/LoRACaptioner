@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable'
@@ -37,10 +37,15 @@ export default function EditorPanel() {
   }, [selectedItem])
 
   const selectedIdx = selectedItem ? items.indexOf(selectedItem) : -1
+  const queryClient = useQueryClient()
 
   const { mutate: save, isPending: saving } = useMutation({
     mutationFn: ({ filename, caption }: { filename: string; caption: string }) => api.saveCaption(filename, caption),
-    onSuccess: () => { setDirty(false); if (selectedItem) updateItem(selectedItem.filename, caption) },
+    onSuccess: () => {
+      setDirty(false)
+      if (selectedItem) updateItem(selectedItem.filename, caption)
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+    },
     onError: () => toast.error('Ошибка сохранения'),
   })
 

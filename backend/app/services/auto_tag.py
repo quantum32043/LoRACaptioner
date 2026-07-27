@@ -1,8 +1,6 @@
 import asyncio
 import gc
-import json
 import logging
-import os
 import time
 from enum import Enum
 from pathlib import Path
@@ -10,7 +8,6 @@ from typing import Optional
 
 import torch
 from PIL import Image
-from transformers import AutoProcessor, AutoModelForCausalLM
 
 from app.config import settings
 from app.services.model_store import model_store
@@ -122,30 +119,6 @@ class AutoTagService:
 
         await self._load_model()
 
-    @staticmethod
-    def _patch_auto_map(model_dir: Path):
-        config_path = model_dir / "config.json"
-        if not config_path.exists():
-            return
-        try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = json.load(f)
-            auto_map = config.get("auto_map", {})
-            changed = False
-            for key, value in auto_map.items():
-                if "--" in value:
-                    parts = value.split("--", 1)
-                    if len(parts) == 2:
-                        auto_map[key] = parts[1]
-                        changed = True
-            if changed:
-                config["auto_map"] = auto_map
-                with open(config_path, "w", encoding="utf-8") as f:
-                    json.dump(config, f, indent=2, ensure_ascii=False)
-                logger.info("Patched auto_map in config.json to use local files")
-        except Exception as e:
-            logger.warning(f"Failed to patch auto_map: {e}")
-
     async def _load_model(self):
         if self._state == ModelState.READY:
             return
@@ -154,45 +127,72 @@ class AutoTagService:
         repo_id = settings.hf_model_name
         model_dir = model_store.get_model_path(repo_id)
 
-        self._patch_auto_map(model_dir)
-
         try:
             if self._gpu_available:
                 self._device = "cuda"
-                torch_dtype = torch.float16
             else:
                 self._device = "cpu"
-                torch_dtype = torch.float32
-
-            old_tf_offline = os.environ.get("TRANSFORMERS_OFFLINE")
-            old_hf_offline = os.environ.get("HF_HUB_OFFLINE")
-            os.environ["TRANSFORMERS_OFFLINE"] = "1"
-            os.environ["HF_HUB_OFFLINE"] = "1"
 
             def _load():
-                processor = AutoProcessor.from_pretrained(
-                    str(model_dir), trust_remote_code=True, local_files_only=True
+                import importlib.util
+                import sys as _sys
+
+                from transformers import GenerationMixin
+
+                # Ensure __init__.py exists so directory is a package
+                (model_dir / "__init__.py").touch()
+
+                PKG = "_florence2_loader"
+
+                def _load_submodule(name, path):
+                    spec = importlib.util.spec_from_file_location(
+                        f"{PKG}.{name}", model_dir / path,
+                        submodule_search_locations=[str(model_dir)]
+                    )
+                    mod = importlib.util.module_from_spec(spec)
+                    _sys.modules[f"{PKG}.{name}"] = mod
+                    spec.loader.exec_module(mod)
+                    return mod
+
+                # Load __init__.py as package root
+                spec_pkg = importlib.util.spec_from_file_location(
+                    PKG, model_dir / "__init__.py",
+                    submodule_search_locations=[str(model_dir)]
                 )
-                model = AutoModelForCausalLM.from_pretrained(
-                    str(model_dir),
-                    trust_remote_code=True,
-                    torch_dtype=torch_dtype,
-                    device_map=self._device,
-                    local_files_only=True,
+                pkg = importlib.util.module_from_spec(spec_pkg)
+                _sys.modules[PKG] = pkg
+                spec_pkg.loader.exec_module(pkg)
+
+                _cfg_mod = _load_submodule("configuration_florence2", "configuration_florence2.py")
+                _mod_mod = _load_submodule("modeling_florence2", "modeling_florence2.py")
+                _proc_mod = _load_submodule("processing_florence2", "processing_florence2.py")
+
+                # Patch GenerationMixin — transformers >=4.50 no longer inherits it in PreTrainedModel
+                _mod_mod.Florence2PreTrainedModel.__bases__ = (GenerationMixin, _mod_mod.PreTrainedModel)
+                _mod_mod.Florence2LanguagePreTrainedModel.__bases__ = (GenerationMixin, _mod_mod.PreTrainedModel)
+
+                config = _mod_mod.Florence2Config.from_pretrained(
+                    str(model_dir), local_files_only=True
                 )
+                # Skip SDPA check (model predates this transformers feature)
+                config._attn_implementation = "eager"
+
+                model = _mod_mod.Florence2ForConditionalGeneration(config)
+
+                from safetensors.torch import load_file
+                state_dict = load_file(str(model_dir / "model.safetensors"))
+                model.load_state_dict(state_dict, strict=False)
+
+                model.to(self._device)
+                model.eval()
+
+                processor = _proc_mod.Florence2Processor.from_pretrained(
+                    str(model_dir), local_files_only=True
+                )
+
                 return processor, model
 
-            try:
-                self._processor, self._model = await asyncio.to_thread(_load)
-            finally:
-                if old_tf_offline is None:
-                    os.environ.pop("TRANSFORMERS_OFFLINE", None)
-                else:
-                    os.environ["TRANSFORMERS_OFFLINE"] = old_tf_offline
-                if old_hf_offline is None:
-                    os.environ.pop("HF_HUB_OFFLINE", None)
-                else:
-                    os.environ["HF_HUB_OFFLINE"] = old_hf_offline
+            self._processor, self._model = await asyncio.to_thread(_load)
             self._state = ModelState.READY
             self._last_error = None
             logger.info(f"Model loaded on {self._device}")

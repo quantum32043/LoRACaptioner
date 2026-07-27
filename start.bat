@@ -2,7 +2,8 @@
 cd /d "%~dp0"
 title LoRA Captioner
 
-where python >nul 2>&1 || (
+where python >nul 2>&1
+if errorlevel 1 (
     echo [ERROR] Python not found.
     echo Install Python 3.10+ from https://www.python.org/downloads/
     pause
@@ -36,6 +37,44 @@ if errorlevel 1 (
     exit /b
 )
 
+if exist frontend\dist\index.html goto :frontend_ready
+
+echo [*] Building frontend...
+cd frontend
+if not exist node_modules\ goto :install_npm
+:npm_installed
+npm run build
+if errorlevel 1 goto :build_failed
+cd ..
+goto :frontend_ready
+
+:install_npm
+where node >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Node.js not found.
+    echo Install Node.js 18+ from https://nodejs.org/
+    pause
+    exit /b
+)
+echo [*] Installing npm packages...
+npm install
+if errorlevel 1 (
+    echo [ERROR] npm install failed
+    pause
+    exit /b
+)
+goto :npm_installed
+
+:build_failed
+cd ..
+echo [ERROR] Frontend build failed
+pause
+exit /b
+
+:frontend_ready
+
+:start_server
+echo.
 echo [*] Starting LoRA Captioner...
 echo.
 echo    Open http://localhost:8000

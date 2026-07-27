@@ -271,7 +271,7 @@ export default function EditorPanel() {
             <span className="font-mono text-xs text-cyano truncate">выбрано {selectedFilenames.length} / {total}</span>
             <div className="flex items-center gap-2 shrink-0">
               <button onClick={handleSave} disabled={batchSaving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{batchSaving ? '...' : 'Сохранить всем'}</button>
-              {autoTagState === 'ready' && (
+              {(autoTagState === 'ready' || autoTagState === 'unloaded') && (
                 <button onClick={handleBatchAutoTag} disabled={batchAutoTagging} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-cyano/50 rounded-md text-cyano hover:bg-coal-700" title="Авто-теги выбранным"><Sparkles size={14} />{batchAutoTagging ? '...' : 'Auto'}</button>
               )}
               <button onClick={clearSelection} className="text-xs font-mono text-paper-faint hover:text-paper border border-coal-600 px-2 py-0.5 rounded-md">Снять</button>
@@ -288,7 +288,7 @@ export default function EditorPanel() {
               <span className={`w-2 h-2 rounded-full ${dirty ? 'bg-safe animate-pulse shadow-[0_0_6px_#f5a02c]' : 'bg-cyano'}`} />
               <button onClick={() => setTagMode(!tagMode)} className="text-paper-faint hover:text-paper"><Type size={16} /></button>
               <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{saving ? '...' : 'Сохранить'}</button>
-              {autoTagState === 'ready' && (
+              {(autoTagState === 'ready' || autoTagState === 'unloaded') && (
                 <button onClick={handleAutoTag} disabled={autoTagging} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-cyano/50 rounded-md text-cyano hover:bg-coal-700" title="Авто-теги"><Sparkles size={14} />{autoTagging ? '...' : 'Auto'}</button>
               )}
             </div>

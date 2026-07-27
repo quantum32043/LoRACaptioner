@@ -284,7 +284,7 @@ export default function AutoTagPanel() {
                   <>
                     <button
                       onClick={handleAutoAll}
-                      disabled={autoTagState !== 'ready' || batchRunning}
+                      disabled={(autoTagState !== 'ready' && autoTagState !== 'unloaded') || batchRunning}
                       className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono bg-safe/20 text-safe border border-safe/40 rounded-md hover:bg-safe/30 disabled:opacity-50"
                     >
                       <Sparkles size={14} />
@@ -292,7 +292,7 @@ export default function AutoTagPanel() {
                     </button>
                     <button
                       onClick={handleAutoSelected}
-                      disabled={autoTagState !== 'ready' || batchRunning || effectiveSelection.length === 0}
+                      disabled={(autoTagState !== 'ready' && autoTagState !== 'unloaded') || batchRunning || effectiveSelection.length === 0}
                       className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono bg-coal-800 text-paper-muted border border-coal-600 rounded-md hover:text-paper disabled:opacity-50"
                     >
                       <Sparkles size={14} />

@@ -40,7 +40,7 @@ class AutoTagService:
         self._model = None
         self._processor = None
         self._device: Optional[str] = None
-        self._state = ModelState.UNAVAILABLE
+        self._state = ModelState.UNLOADED if model_store.is_downloaded(settings.hf_model_name) else ModelState.NOT_DOWNLOADED
         self._last_activity: float = 0.0
         self._unload_task: Optional[asyncio.Task] = None
         self._current_task_mode: str = "generate_prompt"
@@ -180,6 +180,9 @@ class AutoTagService:
 
         if model_store.is_downloaded(repo_id):
             logger.info(f"Model {repo_id} already downloaded")
+            model_dir = model_store.get_model_path(repo_id)
+            self._state = ModelState.UNLOADED
+            return model_dir
 
         self._state = ModelState.DOWNLOADING
 
@@ -187,7 +190,7 @@ class AutoTagService:
             result = await model_store.download(
                 repo_id, progress_callback=progress_callback
             )
-            await self._load_model()
+            self._state = ModelState.UNLOADED
             return result
         except Exception as e:
             self._state = ModelState.ERROR

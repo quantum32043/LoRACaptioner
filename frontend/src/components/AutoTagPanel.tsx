@@ -25,7 +25,9 @@ export default function AutoTagPanel() {
   const downloadProgress = useDatasetStore((s) => s.downloadProgress)
   const batchTagProgress = useDatasetStore((s) => s.batchTagProgress)
   const gpuFallbackConfirmed = useDatasetStore((s) => s.gpuFallbackConfirmed)
+  const selectedFilename = useDatasetStore((s) => s.selectedFilename)
   const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
+  const effectiveSelection = selectedFilenames.length > 0 ? selectedFilenames : (selectedFilename ? [selectedFilename] : [])
   const setAutoTagStatus = useDatasetStore((s) => s.setAutoTagStatus)
   const setAutoTagModes = useDatasetStore((s) => s.setAutoTagModes)
   const setDownloadProgress = useDatasetStore((s) => s.setDownloadProgress)
@@ -115,7 +117,10 @@ export default function AutoTagPanel() {
   }, [autoTagGpuAvailable, gpuFallbackConfirmed])
 
   const handleAutoSelected = useCallback(() => {
-    if (selectedFilenames.length === 0) {
+    const filenames = useDatasetStore.getState().selectedFilenames
+    const single = useDatasetStore.getState().selectedFilename
+    const effective = filenames.length > 0 ? filenames : (single ? [single] : [])
+    if (effective.length === 0) {
       toast.error('Не выбрано ни одного кадра')
       return
     }
@@ -123,8 +128,8 @@ export default function AutoTagPanel() {
       setShowGpuDialog(true)
       return
     }
-    runBatchSelected()
-  }, [selectedFilenames, autoTagGpuAvailable, gpuFallbackConfirmed])
+    runBatchSelected(effective)
+  }, [autoTagGpuAvailable, gpuFallbackConfirmed])
 
   const handleGpuConfirm = useCallback(() => {
     setShowGpuDialog(false)
@@ -159,8 +164,7 @@ export default function AutoTagPanel() {
     }
   }, [autoTagTaskMode, queryClient, setBatchTagProgress])
 
-  const runBatchSelected = useCallback(async () => {
-    const filenames = useDatasetStore.getState().selectedFilenames
+  const runBatchSelected = useCallback(async (filenames: string[]) => {
     if (filenames.length === 0) return
     setBatchRunning(true)
     try {
@@ -288,11 +292,11 @@ export default function AutoTagPanel() {
                     </button>
                     <button
                       onClick={handleAutoSelected}
-                      disabled={autoTagState !== 'ready' || batchRunning || selectedFilenames.length === 0}
+                      disabled={autoTagState !== 'ready' || batchRunning || effectiveSelection.length === 0}
                       className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono bg-coal-800 text-paper-muted border border-coal-600 rounded-md hover:text-paper disabled:opacity-50"
                     >
                       <Sparkles size={14} />
-                      Auto выбранные ({selectedFilenames.length})
+                      Auto выбранные ({effectiveSelection.length})
                     </button>
                     <button
                       onClick={() => {

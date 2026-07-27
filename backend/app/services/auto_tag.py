@@ -137,7 +137,7 @@ class AutoTagService:
                 import importlib.util
                 import sys as _sys
 
-                from transformers import GenerationMixin
+                from transformers import GenerationConfig, GenerationMixin
 
                 # Ensure __init__.py exists so directory is a package
                 (model_dir / "__init__.py").touch()
@@ -167,9 +167,73 @@ class AutoTagService:
                 _mod_mod = _load_submodule("modeling_florence2", "modeling_florence2.py")
                 _proc_mod = _load_submodule("processing_florence2", "processing_florence2.py")
 
+                # ── transformers 4.57.6 compatibility patches ──────────────────────────
+
                 # Patch GenerationMixin — transformers >=4.50 no longer inherits it in PreTrainedModel
                 _mod_mod.Florence2PreTrainedModel.__bases__ = (GenerationMixin, _mod_mod.PreTrainedModel)
                 _mod_mod.Florence2LanguagePreTrainedModel.__bases__ = (GenerationMixin, _mod_mod.PreTrainedModel)
+
+                # ── transformers 4.57.6 generation compatibility ────────────────────────
+                # Replace both prepare_inputs_for_generation and the outer generate() with
+                # direct implementations, bypassing transformers internals entirely.
+                def _patch_prepare_inputs(klass):
+                    orig = klass.prepare_inputs_for_generation
+                    def patched(self, decoder_input_ids, past_key_values=None, **kwargs):
+                        if past_key_values is not None:
+                            if hasattr(past_key_values, 'self_attention_cache'):
+                                past_length = past_key_values.self_attention_cache[0][0].shape[2]
+                            else:
+                                past_length = past_key_values[0][0].shape[2]
+                            if decoder_input_ids.shape[1] > past_length:
+                                decoder_input_ids = decoder_input_ids[:, past_length:]
+                            else:
+                                decoder_input_ids = decoder_input_ids[:, -1:]
+                        return orig(self, decoder_input_ids, past_key_values=past_key_values, **kwargs)
+                    klass.prepare_inputs_for_generation = patched
+                _patch_prepare_inputs(_mod_mod.Florence2LanguageForConditionalGeneration)
+                _patch_prepare_inputs(_mod_mod.Florence2ForConditionalGeneration)
+
+                def _patched_outer_generate(self, input_ids=None, inputs_embeds=None, pixel_values=None, **kw):
+                    import torch as _torch
+                    attention_mask = kw.get('attention_mask')
+                    if inputs_embeds is None:
+                        if input_ids is not None:
+                            inputs_embeds = self.get_input_embeddings()(input_ids)
+                        if pixel_values is not None:
+                            image_features = self._encode_image(pixel_values)
+                            inputs_embeds, attention_mask = self._merge_input_ids_with_image_features(image_features, inputs_embeds)
+
+                    encoder = self.language_model.get_encoder()
+                    encoder_outputs = encoder(inputs_embeds=inputs_embeds, attention_mask=attention_mask, return_dict=True)
+
+                    start_id = getattr(self.config, 'decoder_start_token_id', None) or 2
+                    eos_id = int(kw.get('eos_token_id', getattr(self.config, 'eos_token_id', 2)))
+                    max_new = kw.get('max_new_tokens', 1024)
+                    device = inputs_embeds.device
+                    batch_size = inputs_embeds.shape[0]
+
+                    decoder_ids = _torch.full((batch_size, 1), start_id, dtype=_torch.long, device=device)
+                    past_key_values = None
+
+                    for step in range(max_new):
+                        out = self.language_model(
+                            input_ids=None,
+                            attention_mask=attention_mask,
+                            decoder_input_ids=decoder_ids[:, -1:] if past_key_values is not None else decoder_ids,
+                            encoder_outputs=encoder_outputs,
+                            past_key_values=past_key_values,
+                            use_cache=True,
+                            return_dict=True,
+                        )
+                        logits = out.logits[:, -1, :]
+                        next_token = logits.argmax(dim=-1, keepdim=True)
+                        decoder_ids = _torch.cat([decoder_ids, next_token], dim=-1)
+                        past_key_values = out.past_key_values
+                        if next_token.item() == eos_id:
+                            break
+
+                    return decoder_ids
+                _mod_mod.Florence2ForConditionalGeneration.generate = _patched_outer_generate
 
                 config = _mod_mod.Florence2Config.from_pretrained(
                     str(model_dir), local_files_only=True
@@ -178,6 +242,12 @@ class AutoTagService:
                 config._attn_implementation = "eager"
 
                 model = _mod_mod.Florence2ForConditionalGeneration(config)
+                # PreTrainedModel.__init__ sets generation_config=None because can_generate() explicitly
+                # skips bases with "PreTrainedModel" in the name (the GenerationMixin patch on intermediate
+                # bases doesn't cascade). Set it explicitly + recurse into language_model submodule.
+                gc = GenerationConfig.from_model_config(config)
+                model.generation_config = gc
+                model.language_model.generation_config = gc
 
                 from safetensors.torch import load_file
                 state_dict = load_file(str(model_dir / "model.safetensors"))

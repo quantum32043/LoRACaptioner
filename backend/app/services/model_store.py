@@ -30,6 +30,44 @@ class DownloadProgress:
         }
 
 
+def _download_file(
+    repo_id: str,
+    file: RepoFile,
+    model_dir: Path,
+) -> str:
+    return hf_hub_download(
+        repo_id=repo_id,
+        filename=file.path,
+        local_dir=str(model_dir),
+        local_dir_use_symlinks=False,
+        resume_download=True,
+    )
+
+
+async def _download_with_retry(
+    repo_id: str,
+    file: RepoFile,
+    model_dir: Path,
+    max_retries: int = 3,
+) -> str:
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            return await asyncio.to_thread(_download_file, repo_id, file, model_dir)
+        except Exception as e:
+            last_error = e
+            logger.warning(
+                f"Download attempt {attempt + 1}/{max_retries} failed for "
+                f"{file.path}: {e}"
+            )
+            if attempt < max_retries - 1:
+                wait = 2 ** attempt
+                await asyncio.sleep(wait)
+    raise RuntimeError(
+        f"Failed to download {file.path} after {max_retries} attempts: {last_error}"
+    )
+
+
 class ModelStore:
     def __init__(self, cache_dir: str):
         self._cache_dir = Path(cache_dir)
@@ -79,18 +117,34 @@ class ModelStore:
             if progress_callback:
                 progress_callback(progress)
 
-            await asyncio.to_thread(
-                lambda f=file: hf_hub_download(
-                    repo_id=repo_id,
-                    filename=f.path,
-                    local_dir=str(model_dir),
-                    local_dir_use_symlinks=False,
-                    resume_download=True,
-                )
+            download_task = asyncio.create_task(
+                _download_with_retry(repo_id, file, model_dir)
             )
 
+            dest = model_dir / file.path
+
+            while not download_task.done():
+                done, _ = await asyncio.wait(
+                    [download_task], timeout=0.8
+                )
+                if dest.exists():
+                    try:
+                        partial = dest.stat().st_size
+                    except OSError:
+                        partial = 0
+                    progress.downloaded_bytes = (
+                        sum(f.size for f in files[: files.index(file)])
+                        + partial
+                    )
+                    if progress_callback:
+                        progress_callback(progress)
+
+            await download_task
+
             progress.files_done += 1
-            progress.downloaded_bytes += file.size
+            progress.downloaded_bytes = (
+                sum(f.size for f in files[: files.index(file) + 1])
+            )
             if progress_callback:
                 progress_callback(progress)
 

@@ -69,18 +69,29 @@ async def download():
         raise HTTPException(status_code=409, detail=f"Model already in state: {auto_tag_service.state.value}")
 
     async def event_stream():
+        queue: asyncio.Queue = asyncio.Queue()
+
+        def on_progress(progress):
+            data = progress.to_dict()
+            payload = f"event: progress\ndata: {json.dumps(data)}\n\n"
+            queue.put_nowait(payload)
+
+        yield "event: start\ndata: {}\n\n"
+
+        download_task = asyncio.create_task(
+            auto_tag_service.download_model(progress_callback=on_progress)
+        )
+
         try:
-            def on_progress(progress):
-                nonlocal last_sent
-                data = progress.to_dict()
-                payload = f"event: progress\ndata: {json.dumps(data)}\n\n"
-                if payload != last_sent:
-                    last_sent = payload
-
-            last_sent = ""
-            yield "event: start\ndata: {}\n\n"
-
-            await auto_tag_service.download_model(progress_callback=on_progress)
+            while True:
+                done, _ = await asyncio.wait(
+                    [download_task], timeout=0.5
+                )
+                while not queue.empty():
+                    yield queue.get_nowait()
+                if done:
+                    await download_task
+                    break
 
             yield "event: complete\ndata: {}\n\n"
         except Exception as e:

@@ -102,6 +102,7 @@ export default function AutoTagPanel() {
     } catch (e) {
       setDownloadProgress(null)
       queryClient.invalidateQueries({ queryKey: ['auto-tag-status'] })
+      toast.error(`Ошибка подключения: ${e instanceof Error ? e.message : 'Неизвестная ошибка'}`)
     }
   }, [queryClient, setDownloadProgress])
 
@@ -265,13 +266,13 @@ export default function AutoTagPanel() {
               )}
 
               <div className="flex flex-col gap-1.5">
-                {(autoTagState === 'not_downloaded' || autoTagState === 'unavailable') && (
+                {(autoTagState === 'not_downloaded' || autoTagState === 'unavailable' || autoTagState === 'error') && (
                   <button
                     onClick={handleDownload}
                     className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono bg-cyano/20 text-cyano border border-cyano/40 rounded-md hover:bg-cyano/30"
                   >
                     <Download size={14} />
-                    Скачать модель
+                    {autoTagState === 'error' ? 'Повторить скачивание' : 'Скачать модель'}
                   </button>
                 )}
 

@@ -268,8 +268,6 @@ class AutoTagService:
                 model.load_state_dict(state_dict, strict=False)
 
                 model.to(self._device)
-                if self._device == "cuda":
-                    model = model.half()
                 model.eval()
 
                 processor = _proc_mod.Florence2Processor.from_pretrained(

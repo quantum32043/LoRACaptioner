@@ -111,9 +111,8 @@ class AutoTagService:
             return
 
         if self._state == ModelState.ERROR:
-            raise RuntimeError(
-                f"Model in error state: {self._last_error}"
-            )
+            logger.info("Attempting recovery from error state")
+            self._last_error = None
 
         if not model_store.is_downloaded(repo_id):
             self._state = ModelState.NOT_DOWNLOADED
@@ -165,26 +164,35 @@ class AutoTagService:
                 self._device = "cpu"
                 torch_dtype = torch.float32
 
-            def _load():
-                os.environ["TRANSFORMERS_OFFLINE"] = "1"
-                os.environ["HF_HUB_OFFLINE"] = "1"
-                try:
-                    processor = AutoProcessor.from_pretrained(
-                        str(model_dir), trust_remote_code=True, local_files_only=True
-                    )
-                    model = AutoModelForCausalLM.from_pretrained(
-                        str(model_dir),
-                        trust_remote_code=True,
-                        torch_dtype=torch_dtype,
-                        device_map=self._device,
-                        local_files_only=True,
-                    )
-                    return processor, model
-                finally:
-                    os.environ.pop("TRANSFORMERS_OFFLINE", None)
-                    os.environ.pop("HF_HUB_OFFLINE", None)
+            old_tf_offline = os.environ.get("TRANSFORMERS_OFFLINE")
+            old_hf_offline = os.environ.get("HF_HUB_OFFLINE")
+            os.environ["TRANSFORMERS_OFFLINE"] = "1"
+            os.environ["HF_HUB_OFFLINE"] = "1"
 
-            self._processor, self._model = await asyncio.to_thread(_load)
+            def _load():
+                processor = AutoProcessor.from_pretrained(
+                    str(model_dir), trust_remote_code=True, local_files_only=True
+                )
+                model = AutoModelForCausalLM.from_pretrained(
+                    str(model_dir),
+                    trust_remote_code=True,
+                    torch_dtype=torch_dtype,
+                    device_map=self._device,
+                    local_files_only=True,
+                )
+                return processor, model
+
+            try:
+                self._processor, self._model = await asyncio.to_thread(_load)
+            finally:
+                if old_tf_offline is None:
+                    os.environ.pop("TRANSFORMERS_OFFLINE", None)
+                else:
+                    os.environ["TRANSFORMERS_OFFLINE"] = old_tf_offline
+                if old_hf_offline is None:
+                    os.environ.pop("HF_HUB_OFFLINE", None)
+                else:
+                    os.environ["HF_HUB_OFFLINE"] = old_hf_offline
             self._state = ModelState.READY
             self._last_error = None
             logger.info(f"Model loaded on {self._device}")

@@ -259,14 +259,7 @@ class AutoTagService:
                 config = _mod_mod.Florence2Config.from_pretrained(
                     str(model_dir), local_files_only=True
                 )
-                config._attn_implementation = "sdpa"
-
-                # Florence2PreTrainedModel._supports_sdpa is a @property that accesses
-                # self.language_model._supports_sdpa, but language_model is set AFTER
-                # super().__init__() — replace the property to avoid the early-init crash
-                def _sdpa_getter(self):
-                    return True
-                _mod_mod.Florence2PreTrainedModel._supports_sdpa = property(_sdpa_getter)
+                config._attn_implementation = "eager"
 
                 model = _mod_mod.Florence2ForConditionalGeneration(config)
                 gc = GenerationConfig.from_model_config(config)

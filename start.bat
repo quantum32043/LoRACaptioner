@@ -77,10 +77,13 @@ exit /b
 echo.
 echo [*] Starting LoRA Captioner...
 echo.
-echo    Open http://localhost:8000
+echo    Open http://127.0.0.1:8000
 echo.
-start http://localhost:8000
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir backend
+
+:: Launch browser after a short delay so uvicorn has time to start
+start /b "" cmd /c "timeout /t 3 /nobreak >nul & start http://127.0.0.1:8000"
+
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --app-dir backend
 
 if errorlevel 1 (
     echo [ERROR] Server stopped unexpectedly

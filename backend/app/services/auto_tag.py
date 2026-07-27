@@ -343,14 +343,13 @@ class AutoTagService:
 
         def _infer():
             with torch.no_grad():
-                with torch.autocast(device_type=self._device, dtype=torch.float16, enabled=self._device == "cuda"):
-                    generated_ids = self._model.generate(
-                        input_ids=inputs["input_ids"],
-                        pixel_values=inputs["pixel_values"],
-                        max_new_tokens=512,
-                        do_sample=False,
-                        num_beams=1,
-                    )
+                generated_ids = self._model.generate(
+                    input_ids=inputs["input_ids"],
+                    pixel_values=inputs["pixel_values"],
+                    max_new_tokens=512,
+                    do_sample=False,
+                    num_beams=1,
+                )
             generated_text = self._processor.batch_decode(
                 generated_ids, skip_special_tokens=False
             )[0]

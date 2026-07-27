@@ -10,3 +10,6 @@ thumb_cache/
 /Requirements.txt
 /Commit.md
 venv/
+models/
+thumbs/
+error.md

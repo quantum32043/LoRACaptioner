@@ -2,6 +2,7 @@ import asyncio
 import gc
 import json
 import logging
+import os
 import time
 from enum import Enum
 from pathlib import Path
@@ -165,17 +166,23 @@ class AutoTagService:
                 torch_dtype = torch.float32
 
             def _load():
-                processor = AutoProcessor.from_pretrained(
-                    str(model_dir), trust_remote_code=True, local_files_only=True
-                )
-                model = AutoModelForCausalLM.from_pretrained(
-                    str(model_dir),
-                    trust_remote_code=True,
-                    torch_dtype=torch_dtype,
-                    device_map=self._device,
-                    local_files_only=True,
-                )
-                return processor, model
+                os.environ["TRANSFORMERS_OFFLINE"] = "1"
+                os.environ["HF_HUB_OFFLINE"] = "1"
+                try:
+                    processor = AutoProcessor.from_pretrained(
+                        str(model_dir), trust_remote_code=True, local_files_only=True
+                    )
+                    model = AutoModelForCausalLM.from_pretrained(
+                        str(model_dir),
+                        trust_remote_code=True,
+                        torch_dtype=torch_dtype,
+                        device_map=self._device,
+                        local_files_only=True,
+                    )
+                    return processor, model
+                finally:
+                    os.environ.pop("TRANSFORMERS_OFFLINE", None)
+                    os.environ.pop("HF_HUB_OFFLINE", None)
 
             self._processor, self._model = await asyncio.to_thread(_load)
             self._state = ModelState.READY

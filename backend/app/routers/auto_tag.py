@@ -137,6 +137,9 @@ async def generate(req: GenerateRequest):
         raise HTTPException(status_code=412, detail="Model not downloaded. Call /api/auto-tag/download first.")
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Generate failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
     await dataset_service.save_caption(req.filename, caption)
     return {"filename": req.filename, "caption": caption}
@@ -165,9 +168,9 @@ async def generate_batch(req: GenerateBatchRequest):
                     caption = await auto_tag_service.generate(image_path, task=req.task)
                 except Exception as e:
                     logger.error(f"Failed to generate for {filename}: {e}")
-                    caption = ""
                     yield f"event: error\ndata: {json.dumps({'filename': filename, 'error': str(e)})}\n\n"
                     await asyncio.sleep(0)
+                    continue
 
                 if caption:
                     await dataset_service.save_caption(filename, caption)

@@ -187,7 +187,7 @@ class AutoTagService:
             result = await model_store.download(
                 repo_id, progress_callback=progress_callback
             )
-            self._state = ModelState.NOT_DOWNLOADED if not model_store.is_downloaded(repo_id) else ModelState.UNLOADED
+            await self._load_model()
             return result
         except Exception as e:
             self._state = ModelState.ERROR

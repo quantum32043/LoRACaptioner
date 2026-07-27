@@ -77,26 +77,40 @@ async def download():
             queue.put_nowait(payload)
 
         yield "event: start\ndata: {}\n\n"
+        await asyncio.sleep(0)
 
         download_task = asyncio.create_task(
             auto_tag_service.download_model(progress_callback=on_progress)
         )
 
+        heartbeat_interval = 30
+        poll_interval = 0.3
+        ticks_since_heartbeat = 0
+
         try:
             while True:
                 done, _ = await asyncio.wait(
-                    [download_task], timeout=0.5
+                    [download_task], timeout=poll_interval
                 )
                 while not queue.empty():
                     yield queue.get_nowait()
+                    await asyncio.sleep(0)
                 if done:
                     await download_task
                     break
 
+                ticks_since_heartbeat += 1
+                if ticks_since_heartbeat >= heartbeat_interval:
+                    yield f": heartbeat {ticks_since_heartbeat}\n\n"
+                    await asyncio.sleep(0)
+                    ticks_since_heartbeat = 0
+
             yield "event: complete\ndata: {}\n\n"
+            await asyncio.sleep(0)
         except Exception as e:
             logger.error(f"Download failed: {e}")
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+            await asyncio.sleep(0)
 
     return StreamingResponse(
         event_stream(),
@@ -136,6 +150,8 @@ async def generate_batch(req: GenerateBatchRequest):
     async def event_stream():
         total = len(req.filenames)
         results = {}
+        heartbeat_interval = 30
+        ticks = 0
 
         try:
             for i, filename in enumerate(req.filenames):
@@ -143,6 +159,7 @@ async def generate_batch(req: GenerateBatchRequest):
                 image_path = f"{settings.dataset_path}/{filename}"
 
                 yield f"event: progress\ndata: {json.dumps({'current': i, 'total': total, 'filename': filename})}\n\n"
+                await asyncio.sleep(0)
 
                 try:
                     caption = await auto_tag_service.generate(image_path, task=req.task)
@@ -150,14 +167,22 @@ async def generate_batch(req: GenerateBatchRequest):
                     logger.error(f"Failed to generate for {filename}: {e}")
                     caption = ""
                     yield f"event: error\ndata: {json.dumps({'filename': filename, 'error': str(e)})}\n\n"
+                    await asyncio.sleep(0)
 
                 if caption:
                     await dataset_service.save_caption(filename, caption)
                     results[filename] = caption
 
                 yield f"event: result\ndata: {json.dumps({'filename': filename, 'caption': caption})}\n\n"
+                await asyncio.sleep(0)
+
+                ticks += 1
+                if ticks % heartbeat_interval == 0:
+                    yield f": heartbeat {ticks}\n\n"
+                    await asyncio.sleep(0)
 
             yield f"event: done\ndata: {json.dumps({'count': len(results), 'total': total})}\n\n"
+            await asyncio.sleep(0)
         except asyncio.CancelledError:
             logger.info("Batch generation cancelled by client")
 

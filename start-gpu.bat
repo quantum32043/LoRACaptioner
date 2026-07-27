@@ -29,12 +29,33 @@ if not exist venv\ (
 )
 call venv\Scripts\activate.bat
 
-echo [*] Installing PyTorch (CUDA version)...
-pip install torch torchvision torchaudio
+echo [*] Upgrading pip...
+python -m pip install --upgrade pip
 if errorlevel 1 (
-    echo [ERROR] Failed to install PyTorch
-    pause
-    exit /b
+    echo [WARN] Failed to upgrade pip, continuing...
+)
+
+echo [*] Checking current PyTorch installation...
+python -c "import torch; has_cuda = torch.cuda.is_available(); exit(0 if has_cuda else 1)" 2>nul
+if errorlevel 1 (
+    echo [*] Installing PyTorch (CUDA version)...
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 --force-reinstall
+    if errorlevel 1 (
+        echo [ERROR] Failed to install PyTorch
+        pause
+        exit /b
+    )
+    echo [*] Verifying CUDA availability...
+    python -c "import torch; exit(0 if torch.cuda.is_available() else 1)"
+    if errorlevel 1 (
+        echo [ERROR] PyTorch installed but CUDA is not available.
+        echo    Your NVIDIA driver may be too old for CUDA 12.4.
+        echo    Try updating drivers: https://www.nvidia.com/download.aspx
+        pause
+        exit /b
+    )
+) else (
+    echo [OK] PyTorch with CUDA already installed.
 )
 
 echo [*] Installing dependencies...
@@ -85,10 +106,13 @@ exit /b
 echo.
 echo [*] Starting LoRA Captioner...
 echo.
-echo    Open http://localhost:8000
+echo    Open http://127.0.0.1:8000
 echo.
-start http://localhost:8000
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir backend
+
+:: Launch browser after a short delay so uvicorn has time to start
+start /b "" cmd /c "timeout /t 3 /nobreak >nul & start http://127.0.0.1:8000"
+
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --app-dir backend
 
 if errorlevel 1 (
     echo [ERROR] Server stopped unexpectedly

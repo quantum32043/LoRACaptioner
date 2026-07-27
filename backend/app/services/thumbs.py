@@ -1,13 +1,7 @@
-import os
 from pathlib import Path
-from app.config import settings
+from PIL import Image, ImageOps
 
-try:
-    import pyvips
-    HAS_VIPS = True
-except ImportError:
-    HAS_VIPS = False
-    from PIL import Image, ImageOps
+from app.config import settings
 
 
 def _thumb_path(filename: str) -> Path:
@@ -42,15 +36,9 @@ def _generate_thumb(filename: str) -> bytes | None:
     thumb = _thumb_path(filename)
 
     try:
-        if HAS_VIPS:
-            image = pyvips.Image.new_from_file(str(src))
-            image = image.resize(size / max(image.width, image.height))
-            image.write_to_file(str(thumb), Q=85)
-        else:
-            img = Image.open(src)
-            img = ImageOps.contain(img, (size, size))
-            img.save(thumb, "WEBP", quality=85)
-
+        img = Image.open(src)
+        img = ImageOps.contain(img, (size, size))
+        img.save(thumb, "WEBP", quality=85)
         return thumb.read_bytes()
     except Exception:
         return None

@@ -7,8 +7,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-# Disable CUDA memory caching so that empty_cache() actually releases memory
-os.environ.setdefault("PYTORCH_NO_CUDA_MEMORY_CACHING", "1")
 
 import torch
 from PIL import Image
@@ -272,9 +270,10 @@ class AutoTagService:
                 model.language_model.generation_config = gc
 
                 from safetensors.torch import load_file
-                model.to(self._device)
-                state_dict = load_file(str(model_dir / "model.safetensors"), device=self._device)
+                state_dict = load_file(str(model_dir / "model.safetensors"))
                 model.load_state_dict(state_dict, strict=False)
+                del state_dict
+                model.to(self._device)
 
                 model.eval()
 

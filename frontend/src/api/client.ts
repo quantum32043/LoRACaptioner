@@ -31,19 +31,47 @@ export interface BatchResponse {
 }
 
 export interface AutoTagStatus {
-  available: boolean
+  state: string
   device: string | null
   model: string | null
+  task_mode: string
+  gpu_available: boolean
+  downloaded: boolean
+  last_error: string | null
 }
 
-export interface AutoTagResponse {
+export interface TaskMode {
+  id: string
+  label: string
+  prompt: string
+}
+
+export interface AutoTagModesResponse {
+  modes: TaskMode[]
+  current: string
+}
+
+export interface DownloadProgress {
+  downloaded_bytes: number
+  total_bytes: number
+  current_file: string
+  files_done: number
+  files_total: number
+}
+
+export interface AutoTagResult {
   filename: string
   caption: string
 }
 
-export interface AutoTagBatchResponse {
-  results: Record<string, string>
+export interface AutoTagBatchDone {
   count: number
+  total: number
+}
+
+export interface SSEMessage {
+  event: string
+  data: string
 }
 
 const BASE = '/api'
@@ -52,6 +80,36 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${url}`, init)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
+}
+
+async function* fetchSSE(url: string, init?: RequestInit): AsyncGenerator<SSEMessage> {
+  const res = await fetch(`${BASE}${url}`, init)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+  const reader = res.body?.getReader()
+  if (!reader) throw new Error('No response body')
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let event = 'message'
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+
+    for (const line of lines) {
+      if (line.startsWith('event: ')) {
+        event = line.slice(7).trim()
+      } else if (line.startsWith('data: ')) {
+        yield { event, data: line.slice(6).trim() }
+        event = 'message'
+      }
+    }
+  }
 }
 
 export const api = {
@@ -88,15 +146,39 @@ export const api = {
     return fetchJson<AutoTagStatus>('/auto-tag/status')
   },
 
-  generateCaption(filename: string, task = '<GENERATE_PROMPT>') {
-    return fetchJson<AutoTagResponse>('/auto-tag/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename, task }) })
+  getAutoTagModes() {
+    return fetchJson<AutoTagModesResponse>('/auto-tag/modes')
   },
 
-  generateBatch(filenames: string[], task = '<GENERATE_PROMPT>') {
-    return fetchJson<AutoTagBatchResponse>('/auto-tag/generate-batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filenames, task }) })
+  setAutoTagMode(mode: string) {
+    return fetchJson<{ status: string; mode: string }>('/auto-tag/set-mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }) })
   },
 
-  generateUntagged(task = '<GENERATE_PROMPT>') {
-    return fetchJson<AutoTagBatchResponse>('/auto-tag/generate-untagged', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ task }) })
+  unloadModel() {
+    return fetchJson<{ status: string; state: string }>('/auto-tag/unload', { method: 'POST' })
+  },
+
+  generateCaption(filename: string, task?: string) {
+    return fetchJson<AutoTagResult>('/auto-tag/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename, task }) })
+  },
+
+  downloadModelSSE(): AsyncGenerator<SSEMessage> {
+    return fetchSSE('/auto-tag/download')
+  },
+
+  generateBatchSSE(filenames: string[], task?: string): AsyncGenerator<SSEMessage> {
+    return fetchSSE('/auto-tag/generate-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filenames, task }),
+    })
+  },
+
+  generateUntaggedSSE(task?: string): AsyncGenerator<SSEMessage> {
+    return fetchSSE('/auto-tag/generate-untagged', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task }),
+    })
   },
 }

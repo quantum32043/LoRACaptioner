@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import { api } from './api/client'
@@ -10,8 +10,6 @@ import ImageGrid from './components/ImageGrid'
 import EditorPanel from './components/EditorPanel'
 import StatusStrip from './components/StatusStrip'
 
-export const AutoTagCtx = createContext(false)
-
 function App() {
   const [batchOpen, setBatchOpen] = useState(false)
   const setItems = useDatasetStore((s) => s.setItems)
@@ -19,6 +17,8 @@ function App() {
   const setPanelOpen = useDatasetStore((s) => s.setPanelOpen)
   const filterUntagged = useDatasetStore((s) => s.filterUntagged)
   const searchQuery = useDatasetStore((s) => s.searchQuery)
+  const setAutoTagStatus = useDatasetStore((s) => s.setAutoTagStatus)
+  const setAutoTagModes = useDatasetStore((s) => s.setAutoTagModes)
 
   const { data } = useQuery({
     queryKey: ['items', filterUntagged, searchQuery],
@@ -26,10 +26,24 @@ function App() {
     placeholderData: (prev) => prev,
   })
 
-  const { data: autoTagStatus } = useQuery({
+  useQuery({
     queryKey: ['auto-tag-status'],
-    queryFn: api.getAutoTagStatus,
-    staleTime: 60_000,
+    queryFn: async () => {
+      const status = await api.getAutoTagStatus()
+      setAutoTagStatus(status)
+      return status
+    },
+    refetchInterval: 30000,
+  })
+
+  useQuery({
+    queryKey: ['auto-tag-modes'],
+    queryFn: async () => {
+      const res = await api.getAutoTagModes()
+      setAutoTagModes(res.modes, res.current)
+      return res
+    },
+    staleTime: 60000,
   })
 
   useEffect(() => {
@@ -37,7 +51,6 @@ function App() {
   }, [data])
 
   return (
-    <AutoTagCtx.Provider value={autoTagStatus?.available ?? false}>
     <div className="h-screen w-screen flex flex-col bg-coal-950 text-paper overflow-hidden relative">
       <div className="film-grain fixed inset-0 z-50" />
       <div className="vignette fixed inset-0 z-40" />
@@ -63,7 +76,6 @@ function App() {
       </div>
       <Toaster position="bottom-right" toastOptions={{ style: { background: '#1c1815', color: '#ece5d8', border: '1px solid #2e2822' } }} />
     </div>
-    </AutoTagCtx.Provider>
   )
 }
 

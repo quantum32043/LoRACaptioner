@@ -1,5 +1,28 @@
 import { create } from 'zustand'
-import type { Item } from '../api/client'
+import type { Item, AutoTagStatus, TaskMode } from '../api/client'
+
+export type AutoTagState =
+  | 'unavailable'
+  | 'not_downloaded'
+  | 'downloading'
+  | 'loading'
+  | 'ready'
+  | 'unloaded'
+  | 'error'
+
+export interface DownloadProgressInfo {
+  downloaded_bytes: number
+  total_bytes: number
+  current_file: string
+  files_done: number
+  files_total: number
+}
+
+export interface BatchTagProgress {
+  current: number
+  total: number
+  filename: string
+}
 
 interface DatasetState {
   items: Item[]
@@ -17,6 +40,26 @@ interface DatasetState {
   setSearchQuery: (q: string) => void
   setPanelOpen: (open: boolean) => void
   updateItem: (filename: string, caption: string) => void
+
+  autoTagState: AutoTagState
+  autoTagDevice: string | null
+  autoTagModel: string | null
+  autoTagTaskMode: string
+  autoTagGpuAvailable: boolean
+  autoTagDownloaded: boolean
+  autoTagLastError: string | null
+  autoTagModes: TaskMode[]
+  downloadProgress: DownloadProgressInfo | null
+  batchTagProgress: BatchTagProgress | null
+  batchTagTotal: number | null
+  gpuFallbackConfirmed: boolean
+  setAutoTagStatus: (status: AutoTagStatus) => void
+  setAutoTagModes: (modes: TaskMode[], current: string) => void
+  setAutoTagTaskMode: (mode: string) => void
+  setDownloadProgress: (p: DownloadProgressInfo | null) => void
+  setBatchTagProgress: (p: BatchTagProgress | null) => void
+  setBatchTagTotal: (t: number | null) => void
+  setGpuFallbackConfirmed: (v: boolean) => void
 }
 
 export const useDatasetStore = create<DatasetState>((set) => ({
@@ -48,4 +91,33 @@ export const useDatasetStore = create<DatasetState>((set) => ({
         item.filename === filename ? { ...item, caption, tagged: caption.trim().length > 0 } : item
       ),
     })),
+
+  autoTagState: 'unavailable',
+  autoTagDevice: null,
+  autoTagModel: null,
+  autoTagTaskMode: 'generate_prompt',
+  autoTagGpuAvailable: false,
+  autoTagDownloaded: false,
+  autoTagLastError: null,
+  autoTagModes: [],
+  downloadProgress: null,
+  batchTagProgress: null,
+  batchTagTotal: null,
+  gpuFallbackConfirmed: false,
+
+  setAutoTagStatus: (status) => set({
+    autoTagState: status.state as AutoTagState,
+    autoTagDevice: status.device,
+    autoTagModel: status.model,
+    autoTagTaskMode: status.task_mode,
+    autoTagGpuAvailable: status.gpu_available,
+    autoTagDownloaded: status.downloaded,
+    autoTagLastError: status.last_error,
+  }),
+  setAutoTagModes: (modes, current) => set({ autoTagModes: modes, autoTagTaskMode: current }),
+  setAutoTagTaskMode: (mode) => set({ autoTagTaskMode: mode }),
+  setDownloadProgress: (p) => set({ downloadProgress: p }),
+  setBatchTagProgress: (p) => set({ batchTagProgress: p }),
+  setBatchTagTotal: (t) => set({ batchTagTotal: t }),
+  setGpuFallbackConfirmed: (v) => set({ gpuFallbackConfirmed: v }),
 }))

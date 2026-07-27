@@ -6,7 +6,6 @@ Pillow>=10.0.0
 pydantic>=2.0.0
 pydantic-settings>=2.0.0
 python-multipart>=0.0.18
-torch>=2.0.0
 transformers>=4.40.0,<5.0.0
 accelerate>=0.28.0
 sentencepiece>=0.1.99

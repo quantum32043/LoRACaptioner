@@ -13,3 +13,11 @@ venv/
 models/
 thumbs/
 error.md
+example.md
+backend/*.log
+dataset/*.txt
+dataset/*.jpg
+dataset/*.jpeg
+dataset/*.png
+dataset/*.webp
+dataset/*.bmp

@@ -153,6 +153,7 @@ async def generate_batch(req: GenerateBatchRequest):
     async def event_stream():
         total = len(req.filenames)
         results = {}
+        errors = 0
         heartbeat_interval = 30
         ticks = 0
 
@@ -168,6 +169,7 @@ async def generate_batch(req: GenerateBatchRequest):
                     caption = await auto_tag_service.generate(image_path, task=req.task)
                 except Exception as e:
                     logger.error(f"Failed to generate for {filename}: {e}")
+                    errors += 1
                     yield f"event: error\ndata: {json.dumps({'filename': filename, 'error': str(e)})}\n\n"
                     await asyncio.sleep(0)
                     continue
@@ -184,7 +186,7 @@ async def generate_batch(req: GenerateBatchRequest):
                     yield f": heartbeat {ticks}\n\n"
                     await asyncio.sleep(0)
 
-            yield f"event: done\ndata: {json.dumps({'count': len(results), 'total': total})}\n\n"
+            yield f"event: done\ndata: {json.dumps({'count': len(results), 'errors': errors, 'total': total})}\n\n"
             await asyncio.sleep(0)
         except asyncio.CancelledError:
             logger.info("Batch generation cancelled by client")

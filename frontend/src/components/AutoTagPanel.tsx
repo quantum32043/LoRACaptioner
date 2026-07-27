@@ -146,11 +146,18 @@ export default function AutoTagPanel() {
           const r = JSON.parse(msg.data)
           useDatasetStore.getState().updateItem(r.filename, r.caption)
         } else if (msg.event === 'done') {
+          const d = JSON.parse(msg.data)
           setBatchTagProgress(null)
           queryClient.invalidateQueries({ queryKey: ['items'] })
           queryClient.invalidateQueries({ queryKey: ['stats'] })
-          toast.success('Авто-тегирование завершено')
           setBatchRunning(false)
+          if (d.errors > 0 && d.count > 0) {
+            toast.warning(`Обработано ${d.count}, ошибок ${d.errors}`)
+          } else if (d.errors > 0) {
+            toast.error(`Все ${d.errors} файлов с ошибкой`)
+          } else {
+            toast.success(`Теги добавлены для ${d.count} файлов`)
+          }
         } else if (msg.event === 'error') {
           const err = JSON.parse(msg.data)
           toast.error(`Ошибка: ${err.filename} — ${err.error}`)
@@ -175,11 +182,18 @@ export default function AutoTagPanel() {
           const r = JSON.parse(msg.data)
           useDatasetStore.getState().updateItem(r.filename, r.caption)
         } else if (msg.event === 'done') {
+          const d = JSON.parse(msg.data)
           setBatchTagProgress(null)
           queryClient.invalidateQueries({ queryKey: ['items'] })
           queryClient.invalidateQueries({ queryKey: ['stats'] })
-          toast.success('Авто-тегирование завершено')
           setBatchRunning(false)
+          if (d.errors > 0 && d.count > 0) {
+            toast.warning(`Обработано ${d.count}, ошибок ${d.errors}`)
+          } else if (d.errors > 0) {
+            toast.error(`Все ${d.errors} файлов с ошибкой`)
+          } else {
+            toast.success(`Теги добавлены для ${d.count} файлов`)
+          }
         } else if (msg.event === 'error') {
           const err = JSON.parse(msg.data)
           toast.error(`Ошибка: ${err.filename} — ${err.error}`)

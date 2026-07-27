@@ -30,6 +30,22 @@ export interface BatchResponse {
   total: number
 }
 
+export interface AutoTagStatus {
+  available: boolean
+  device: string | null
+  model: string | null
+}
+
+export interface AutoTagResponse {
+  filename: string
+  caption: string
+}
+
+export interface AutoTagBatchResponse {
+  results: Record<string, string>
+  count: number
+}
+
 const BASE = '/api'
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -66,5 +82,21 @@ export const api = {
 
   rescan() {
     return fetchJson<{ status: string; total: number }>('/dataset/rescan', { method: 'POST' })
+  },
+
+  getAutoTagStatus() {
+    return fetchJson<AutoTagStatus>('/auto-tag/status')
+  },
+
+  generateCaption(filename: string, task = '<GENERATE_PROMPT>') {
+    return fetchJson<AutoTagResponse>('/auto-tag/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename, task }) })
+  },
+
+  generateBatch(filenames: string[], task = '<GENERATE_PROMPT>') {
+    return fetchJson<AutoTagBatchResponse>('/auto-tag/generate-batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filenames, task }) })
+  },
+
+  generateUntagged(task = '<GENERATE_PROMPT>') {
+    return fetchJson<AutoTagBatchResponse>('/auto-tag/generate-untagged', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ task }) })
   },
 }

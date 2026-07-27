@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     dataset_path: str = "./dataset"
     thumb_cache_path: str = "./thumbs"
     thumb_size: int = 512
+    hf_model_name: str = "MiaoshouAI/Florence-2-base-PromptGen"
 
 
 settings = Settings()

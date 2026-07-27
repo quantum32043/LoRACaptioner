@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useContext } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Save, Type, X } from 'lucide-react'
+import { Save, Type, X, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '../api/client'
 import { useDatasetStore } from '../store/useDatasetStore'
+import { AutoTagCtx } from '../App'
 
 function TagChip({ tag, onRemove, onEdit, id }: { tag: string; onRemove: () => void; onEdit: () => void; id: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
@@ -178,6 +179,28 @@ export default function EditorPanel() {
   useEffect(() => { window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown) }, [handleKeyDown])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const autoTagAvailable = useContext(AutoTagCtx)
+
+  const { mutate: doAutoTag, isPending: autoTagging } = useMutation({
+    mutationFn: (filename: string) => api.generateCaption(filename),
+    onSuccess: (data) => {
+      setCaption(data.caption)
+      setDirty(true)
+      if (selectedItem) updateItem(selectedItem.filename, data.caption)
+      toast.success('Теги сгенерированы')
+    },
+    onError: () => toast.error('Ошибка генерации'),
+  })
+
+  const { mutate: doBatchAutoTag, isPending: batchAutoTagging } = useMutation({
+    mutationFn: (filenames: string[]) => api.generateBatch(filenames),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['items'] })
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+      toast.success(`Сгенерировано для ${data.count} файлов`)
+    },
+    onError: () => toast.error('Ошибка пакетной генерации'),
+  })
 
   if (!isBatch && !selectedItem) {
     return (
@@ -198,6 +221,9 @@ export default function EditorPanel() {
           <span className="font-mono text-xs text-cyano truncate">выбрано {selectedFilenames.length} / {total}</span>
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={handleSave} disabled={batchSaving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{batchSaving ? '...' : 'Сохранить всем'}</button>
+            {autoTagAvailable && (
+              <button onClick={() => doBatchAutoTag(selectedFilenames)} disabled={batchAutoTagging} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-cyano/50 rounded-md text-cyano hover:bg-coal-700" title="Авто-теги выбранным"><Sparkles size={14} />{batchAutoTagging ? '...' : 'Auto'}</button>
+            )}
             <button onClick={clearSelection} className="text-xs font-mono text-paper-faint hover:text-paper border border-coal-600 px-2 py-0.5 rounded-md">Снять</button>
             <button onClick={() => setPanelOpen(false)} className="text-paper-faint hover:text-paper md:hidden"><X size={16} /></button>
           </div>
@@ -212,6 +238,9 @@ export default function EditorPanel() {
             <span className={`w-2 h-2 rounded-full ${dirty ? 'bg-safe animate-pulse shadow-[0_0_6px_#f5a02c]' : 'bg-cyano'}`} />
             <button onClick={() => setTagMode(!tagMode)} className="text-paper-faint hover:text-paper"><Type size={16} /></button>
             <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{saving ? '...' : 'Сохранить'}</button>
+            {autoTagAvailable && (
+              <button onClick={() => selectedItem && doAutoTag(selectedItem.filename)} disabled={autoTagging} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-cyano/50 rounded-md text-cyano hover:bg-coal-700" title="Авто-теги"><Sparkles size={14} />{autoTagging ? '...' : 'Auto'}</button>
+            )}
           </div>
         </div>
       )}

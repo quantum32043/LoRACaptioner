@@ -1,5 +1,10 @@
-import { Search, Filter, PanelRightClose, Package } from 'lucide-react'
+import { Search, Filter, PanelRightClose, Package, Sparkles } from 'lucide-react'
+import { useContext } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { api } from '../api/client'
 import { useDatasetStore } from '../store/useDatasetStore'
+import { AutoTagCtx } from '../App'
 
 export default function Toolbar({ onToggleBatch }: { onToggleBatch: () => void }) {
   const searchQuery = useDatasetStore((s) => s.searchQuery)
@@ -7,6 +12,18 @@ export default function Toolbar({ onToggleBatch }: { onToggleBatch: () => void }
   const setSearchQuery = useDatasetStore((s) => s.setSearchQuery)
   const setFilterUntagged = useDatasetStore((s) => s.setFilterUntagged)
   const setPanelOpen = useDatasetStore((s) => s.setPanelOpen)
+  const autoTagAvailable = useContext(AutoTagCtx)
+  const queryClient = useQueryClient()
+
+  const { mutate: doAutoUntagged, isPending: autoUntagging } = useMutation({
+    mutationFn: () => api.generateUntagged(),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['items'] })
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+      toast.success(`Затегировано ${data.count} файлов`)
+    },
+    onError: () => toast.error('Ошибка авто-тегирования'),
+  })
 
   return (
     <div className="flex items-center gap-2 px-4 h-12 border-b border-coal-700 bg-coal-900">
@@ -40,6 +57,17 @@ export default function Toolbar({ onToggleBatch }: { onToggleBatch: () => void }
         <Package size={14} />
         <span className="hidden sm:inline">Batch</span>
       </button>
+
+      {autoTagAvailable && (
+        <button
+          onClick={() => doAutoUntagged()}
+          disabled={autoUntagging}
+          className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-cyano/80 hover:text-cyano border border-cyano/30 rounded-md shrink-0 disabled:opacity-50"
+        >
+          <Sparkles size={14} className={autoUntagging ? 'animate-pulse' : ''} />
+          <span className="hidden sm:inline">{autoUntagging ? '...' : 'Auto все'}</span>
+        </button>
+      )}
 
       <button
         onClick={() => setPanelOpen(true)}

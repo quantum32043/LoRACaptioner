@@ -6,16 +6,25 @@ services:
     volumes:
       - ./dataset:/data/dataset
       - thumb_cache:/data/thumbs
+      - hf_cache:/root/.cache/huggingface
     environment:
       - CAPTIONER_DATASET_PATH=/data/dataset
       - CAPTIONER_THUMB_CACHE_PATH=/data/thumbs
       - CAPTIONER_THUMB_SIZE=512
+      - CAPTIONER_HF_MODEL_NAME=MiaoshouAI/Florence-2-base-PromptGen
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 10s
       timeout: 3s
       retries: 3
-      start_period: 10s
+      start_period: 120s
     restart: unless-stopped
 
   frontend:
@@ -29,3 +38,4 @@ services:
 
 volumes:
   thumb_cache:
+  hf_cache:

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, createContext } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import { api } from './api/client'
@@ -9,6 +9,8 @@ import BatchPanel from './components/BatchPanel'
 import ImageGrid from './components/ImageGrid'
 import EditorPanel from './components/EditorPanel'
 import StatusStrip from './components/StatusStrip'
+
+export const AutoTagCtx = createContext(false)
 
 function App() {
   const [batchOpen, setBatchOpen] = useState(false)
@@ -24,11 +26,18 @@ function App() {
     placeholderData: (prev) => prev,
   })
 
+  const { data: autoTagStatus } = useQuery({
+    queryKey: ['auto-tag-status'],
+    queryFn: api.getAutoTagStatus,
+    staleTime: 60_000,
+  })
+
   useEffect(() => {
     if (data) setItems(data.items, data.total)
   }, [data])
 
   return (
+    <AutoTagCtx.Provider value={autoTagStatus?.available ?? false}>
     <div className="h-screen w-screen flex flex-col bg-coal-950 text-paper overflow-hidden relative">
       <div className="film-grain fixed inset-0 z-50" />
       <div className="vignette fixed inset-0 z-40" />
@@ -54,6 +63,7 @@ function App() {
       </div>
       <Toaster position="bottom-right" toastOptions={{ style: { background: '#1c1815', color: '#ece5d8', border: '1px solid #2e2822' } }} />
     </div>
+    </AutoTagCtx.Provider>
   )
 }
 

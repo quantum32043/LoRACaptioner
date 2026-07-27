@@ -1,5 +1,6 @@
 import asyncio
 import gc
+import json
 import logging
 import time
 from enum import Enum
@@ -121,6 +122,30 @@ class AutoTagService:
 
         await self._load_model()
 
+    @staticmethod
+    def _patch_auto_map(model_dir: Path):
+        config_path = model_dir / "config.json"
+        if not config_path.exists():
+            return
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            auto_map = config.get("auto_map", {})
+            changed = False
+            for key, value in auto_map.items():
+                if "--" in value:
+                    parts = value.split("--", 1)
+                    if len(parts) == 2:
+                        auto_map[key] = parts[1]
+                        changed = True
+            if changed:
+                config["auto_map"] = auto_map
+                with open(config_path, "w", encoding="utf-8") as f:
+                    json.dump(config, f, indent=2, ensure_ascii=False)
+                logger.info("Patched auto_map in config.json to use local files")
+        except Exception as e:
+            logger.warning(f"Failed to patch auto_map: {e}")
+
     async def _load_model(self):
         if self._state == ModelState.READY:
             return
@@ -128,6 +153,8 @@ class AutoTagService:
         self._state = ModelState.LOADING
         repo_id = settings.hf_model_name
         model_dir = model_store.get_model_path(repo_id)
+
+        self._patch_auto_map(model_dir)
 
         try:
             if self._gpu_available:

@@ -80,12 +80,10 @@ echo.
 echo    Open http://127.0.0.1:8000
 echo.
 
-:: Launch browser after a short delay so uvicorn has time to start
-start /b "" cmd /c "timeout /t 3 /nobreak >nul & start http://127.0.0.1:8000"
+start http://127.0.0.1:8000
 
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --app-dir backend
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --app-dir backend 2>>backend\backend_err.log
 
-if errorlevel 1 (
-    echo [ERROR] Server stopped unexpectedly
-    pause
-)
+echo [ERROR] Server stopped unexpectedly
+echo    Check backend\backend_err.log for details.
+pause

@@ -1,10 +1,14 @@
 import asyncio
 import gc
 import logging
+import os
 import time
 from enum import Enum
 from pathlib import Path
 from typing import Optional
+
+# Optimise CUDA memory allocation to reduce fragmentation
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import torch
 from PIL import Image
@@ -26,11 +30,13 @@ class ModelState(str, Enum):
 
 
 TASK_MODES = {
-    "generate_prompt": "<GENERATE_PROMPT>",
+    "generate_tags": "<GENERATE_TAGS>",
     "caption": "<CAPTION>",
     "detailed_caption": "<DETAILED_CAPTION>",
     "more_detailed_caption": "<MORE_DETAILED_CAPTION>",
-    "generate_tags": "<GENERATE_TAGS>",
+    "analyze": "<ANALYZE>",
+    "mixed_caption": "<MIXED_CAPTION>",
+    "mixed_caption_plus": "<MIXED_CAPTION_PLUS>",
 }
 
 
@@ -42,7 +48,7 @@ class AutoTagService:
         self._state = ModelState.UNLOADED if model_store.is_downloaded(settings.hf_model_name) else ModelState.NOT_DOWNLOADED
         self._last_activity: float = 0.0
         self._unload_task: Optional[asyncio.Task] = None
-        self._current_task_mode: str = "generate_prompt"
+        self._current_task_mode: str = "generate_tags"
         self._last_error: Optional[str] = None
         self._unload_delay: int = 300
         self._gpu_available: bool = torch.cuda.is_available()
@@ -136,6 +142,11 @@ class AutoTagService:
             def _load():
                 import importlib.util
                 import sys as _sys
+                import warnings as _warnings
+
+                _warnings.filterwarnings("ignore", message=".*Importing from timm\\.models\\.layers is deprecated.*")
+                _warnings.filterwarnings("ignore", message=".*has generative capabilities.*GenerationMixin.*")
+                _warnings.filterwarnings("ignore", message=".*You are replacing.*timm.*")
 
                 from transformers import GenerationConfig, GenerationMixin
 
@@ -174,8 +185,7 @@ class AutoTagService:
                 _mod_mod.Florence2LanguagePreTrainedModel.__bases__ = (GenerationMixin, _mod_mod.PreTrainedModel)
 
                 # ── transformers 4.57.6 generation compatibility ────────────────────────
-                # Replace both prepare_inputs_for_generation and the outer generate() with
-                # direct implementations, bypassing transformers internals entirely.
+                # Patch prepare_inputs_for_generation to handle the new KV cache format.
                 def _patch_prepare_inputs(klass):
                     orig = klass.prepare_inputs_for_generation
                     def patched(self, decoder_input_ids, past_key_values=None, **kwargs):
@@ -193,6 +203,9 @@ class AutoTagService:
                 _patch_prepare_inputs(_mod_mod.Florence2LanguageForConditionalGeneration)
                 _patch_prepare_inputs(_mod_mod.Florence2ForConditionalGeneration)
 
+                # can_generate() returns False due to PreTrainedModel name check in
+                # transformers >=4.50, so GenerationMixin.generate() is unavailable.
+                # Use our own generation loop instead.
                 def _patched_outer_generate(self, input_ids=None, inputs_embeds=None, pixel_values=None, **kw):
                     import torch as _torch
                     attention_mask = kw.get('attention_mask')
@@ -206,9 +219,11 @@ class AutoTagService:
                     encoder = self.language_model.get_encoder()
                     encoder_outputs = encoder(inputs_embeds=inputs_embeds, attention_mask=attention_mask, return_dict=True)
 
-                    start_id = getattr(self.config, 'decoder_start_token_id', None) or 2
-                    eos_id = int(kw.get('eos_token_id', getattr(self.config, 'eos_token_id', 2)))
-                    max_new = kw.get('max_new_tokens', 1024)
+                    gc = self.generation_config
+                    start_id = gc.decoder_start_token_id
+                    eos_id = int(kw.get('eos_token_id', gc.eos_token_id))
+                    forced_bos_id = getattr(gc, 'forced_bos_token_id', None)
+                    max_new = kw.get('max_new_tokens', gc.max_new_tokens or 512)
                     device = inputs_embeds.device
                     batch_size = inputs_embeds.shape[0]
 
@@ -226,7 +241,10 @@ class AutoTagService:
                             return_dict=True,
                         )
                         logits = out.logits[:, -1, :]
-                        next_token = logits.argmax(dim=-1, keepdim=True)
+                        if forced_bos_id is not None and step == 0 and decoder_ids.shape[1] == 1:
+                            next_token = _torch.full((batch_size, 1), forced_bos_id, dtype=_torch.long, device=device)
+                        else:
+                            next_token = logits.argmax(dim=-1, keepdim=True)
                         decoder_ids = _torch.cat([decoder_ids, next_token], dim=-1)
                         past_key_values = out.past_key_values
                         if next_token.item() == eos_id:
@@ -238,13 +256,9 @@ class AutoTagService:
                 config = _mod_mod.Florence2Config.from_pretrained(
                     str(model_dir), local_files_only=True
                 )
-                # Skip SDPA check (model predates this transformers feature)
                 config._attn_implementation = "eager"
 
                 model = _mod_mod.Florence2ForConditionalGeneration(config)
-                # PreTrainedModel.__init__ sets generation_config=None because can_generate() explicitly
-                # skips bases with "PreTrainedModel" in the name (the GenerationMixin patch on intermediate
-                # bases doesn't cascade). Set it explicitly + recurse into language_model submodule.
                 gc = GenerationConfig.from_model_config(config)
                 model.generation_config = gc
                 model.language_model.generation_config = gc
@@ -254,6 +268,8 @@ class AutoTagService:
                 model.load_state_dict(state_dict, strict=False)
 
                 model.to(self._device)
+                if self._device == "cuda":
+                    model = model.half()
                 model.eval()
 
                 processor = _proc_mod.Florence2Processor.from_pretrained(
@@ -309,6 +325,11 @@ class AutoTagService:
             self._last_error = str(e)
             raise
 
+    def _clean_memory(self):
+        if self._device == "cuda" and torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
+
     async def generate(
         self, image_path: str, task: Optional[str] = None
     ) -> str:
@@ -323,13 +344,15 @@ class AutoTagService:
         inputs = {k: v.to(self._device) for k, v in inputs.items()}
 
         def _infer():
-            generated_ids = self._model.generate(
-                input_ids=inputs["input_ids"],
-                pixel_values=inputs["pixel_values"],
-                max_new_tokens=1024,
-                do_sample=False,
-                num_beams=3,
-            )
+            with torch.no_grad():
+                with torch.autocast(device_type=self._device, dtype=torch.float16, enabled=self._device == "cuda"):
+                    generated_ids = self._model.generate(
+                        input_ids=inputs["input_ids"],
+                        pixel_values=inputs["pixel_values"],
+                        max_new_tokens=512,
+                        do_sample=False,
+                        num_beams=1,
+                    )
             generated_text = self._processor.batch_decode(
                 generated_ids, skip_special_tokens=False
             )[0]
@@ -343,9 +366,20 @@ class AutoTagService:
         if not caption or not caption.strip():
             raise RuntimeError("Model returned empty caption")
 
-        self._unload_task = asyncio.create_task(self._schedule_unload())
+        tags = [t.strip() for t in caption.split(",")]
+        seen = set()
+        unique = []
+        for t in tags:
+            key = t.lower()
+            if key and key not in seen:
+                seen.add(key)
+                unique.append(t)
+        caption = ", ".join(unique)
 
-        return caption.strip()
+        self._unload_task = asyncio.create_task(self._schedule_unload())
+        self._clean_memory()
+
+        return caption
 
 
 class ModelNotDownloadedError(Exception):
@@ -354,11 +388,13 @@ class ModelNotDownloadedError(Exception):
 
 def _mode_label(mode_id: str) -> str:
     labels = {
-        "generate_prompt": "Промпт",
+        "generate_tags": "Теги",
         "caption": "Описание",
         "detailed_caption": "Детальное описание",
         "more_detailed_caption": "Максимально детально",
-        "generate_tags": "Теги",
+        "analyze": "Анализ композиции",
+        "mixed_caption": "Смешанный (теги+описание)",
+        "mixed_caption_plus": "Смешанный+анализ",
     }
     return labels.get(mode_id, mode_id)
 

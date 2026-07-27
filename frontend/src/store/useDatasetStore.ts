@@ -95,7 +95,7 @@ export const useDatasetStore = create<DatasetState>((set) => ({
   autoTagState: 'unavailable',
   autoTagDevice: null,
   autoTagModel: null,
-  autoTagTaskMode: 'generate_prompt',
+  autoTagTaskMode: 'generate_tags',
   autoTagGpuAvailable: false,
   autoTagDownloaded: false,
   autoTagLastError: null,

@@ -186,10 +186,13 @@ async def generate_batch(req: GenerateBatchRequest):
                     yield f": heartbeat {ticks}\n\n"
                     await asyncio.sleep(0)
 
+            auto_tag_service._clean_memory()
+
             yield f"event: done\ndata: {json.dumps({'count': len(results), 'errors': errors, 'total': total})}\n\n"
             await asyncio.sleep(0)
         except asyncio.CancelledError:
             logger.info("Batch generation cancelled by client")
+            auto_tag_service._clean_memory()
 
     return StreamingResponse(
         event_stream(),

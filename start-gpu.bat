@@ -2,6 +2,9 @@
 cd /d "%~dp0"
 title LoRA Captioner [GPU]
 
+:: Reduce CUDA memory fragmentation
+set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
 where python >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] Python not found.

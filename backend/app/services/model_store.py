@@ -114,4 +114,6 @@ class ModelStore:
         }
 
 
-model_store = ModelStore(cache_dir="./models")
+from app.config import settings
+
+model_store = ModelStore(cache_dir=settings.model_cache_dir)

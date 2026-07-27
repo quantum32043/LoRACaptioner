@@ -8,7 +8,10 @@ from pathlib import Path
 from typing import Optional
 
 # Optimise CUDA memory allocation to reduce fragmentation
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+os.environ.setdefault(
+    "PYTORCH_CUDA_ALLOC_CONF",
+    "expandable_segments:True,max_split_size_mb:128",
+)
 
 import torch
 from PIL import Image
@@ -256,6 +259,11 @@ class AutoTagService:
                 config = _mod_mod.Florence2Config.from_pretrained(
                     str(model_dir), local_files_only=True
                 )
+                config._attn_implementation = "sdpa"
+
+                # Florence-2 predates SDPA support — tell transformers it's compatible
+                _mod_mod.Florence2ForConditionalGeneration._supports_sdpa = True
+                _mod_mod.Florence2LanguagePreTrainedModel._supports_sdpa = True
 
                 model = _mod_mod.Florence2ForConditionalGeneration(config)
                 gc = GenerationConfig.from_model_config(config)

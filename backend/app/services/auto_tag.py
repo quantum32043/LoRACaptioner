@@ -245,8 +245,13 @@ class AutoTagService:
                                 step, logits.max().item(), logits.min().item(),
                                 logits.topk(5).indices.tolist(),
                             )
-                            # generate EOS to produce empty caption (will be retried)
                             break
+                        topv, topi = logits.topk(5)
+                        if topi[0, 0].item() == 0:
+                            logger.warning(
+                                "argmax=0 (<s>) step %d — top5 values=%s top5 ids=%s",
+                                step, topv[0].tolist(), topi[0].tolist(),
+                            )
                         if forced_bos_id is not None and step == 0 and decoder_ids.shape[1] == 1:
                             next_token = _torch.full((batch_size, 1), forced_bos_id, dtype=_torch.long, device=device)
                         else:
@@ -271,9 +276,19 @@ class AutoTagService:
 
                 from safetensors.torch import load_file
                 state_dict = load_file(str(model_dir / "model.safetensors"))
-                model.load_state_dict(state_dict, strict=False)
-                del state_dict
+                result = model.load_state_dict(state_dict, strict=False)
+                if result.missing_keys:
+                    logger.warning("Missing keys: %s", result.missing_keys)
+                if result.unexpected_keys:
+                    logger.warning("Unexpected keys: %s", result.unexpected_keys)
+                del state_dict, result
                 model.to(self._device)
+                lm_w = model.language_model.lm_head.weight
+                logger.info(
+                    "lm_head weight — mean=%.6f std=%.6f min=%.6f max=%.6f",
+                    lm_w.mean().item(), lm_w.std().item(),
+                    lm_w.min().item(), lm_w.max().item(),
+                )
 
                 model.eval()
 

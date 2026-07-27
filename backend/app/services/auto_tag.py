@@ -7,11 +7,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-# Optimise CUDA memory allocation to reduce fragmentation
-os.environ.setdefault(
-    "PYTORCH_CUDA_ALLOC_CONF",
-    "expandable_segments:True,max_split_size_mb:128",
-)
+# Disable CUDA memory caching so that empty_cache() actually releases memory
+os.environ.setdefault("PYTORCH_NO_CUDA_MEMORY_CACHING", "1")
 
 import torch
 from PIL import Image
@@ -244,6 +241,14 @@ class AutoTagService:
                             return_dict=True,
                         )
                         logits = out.logits[:, -1, :]
+                        if _torch.isnan(logits).any() or _torch.isinf(logits).any():
+                            logger.error(
+                                "NaN/Inf logits step %d — max=%.4f min=%.4f top5=%s",
+                                step, logits.max().item(), logits.min().item(),
+                                logits.topk(5).indices.tolist(),
+                            )
+                            # generate EOS to produce empty caption (will be retried)
+                            break
                         if forced_bos_id is not None and step == 0 and decoder_ids.shape[1] == 1:
                             next_token = _torch.full((batch_size, 1), forced_bos_id, dtype=_torch.long, device=device)
                         else:
@@ -267,10 +272,10 @@ class AutoTagService:
                 model.language_model.generation_config = gc
 
                 from safetensors.torch import load_file
-                state_dict = load_file(str(model_dir / "model.safetensors"))
+                model.to(self._device)
+                state_dict = load_file(str(model_dir / "model.safetensors"), device=self._device)
                 model.load_state_dict(state_dict, strict=False)
 
-                model.to(self._device)
                 model.eval()
 
                 processor = _proc_mod.Florence2Processor.from_pretrained(
@@ -328,6 +333,7 @@ class AutoTagService:
 
     def _clean_memory(self):
         if self._device == "cuda" and torch.cuda.is_available():
+            torch.cuda.synchronize()
             torch.cuda.empty_cache()
         gc.collect()
 
@@ -343,6 +349,8 @@ class AutoTagService:
         image = Image.open(image_path).convert("RGB")
         inputs = self._processor(text=task_token, images=image, return_tensors="pt")
         inputs = {k: v.to(self._device) for k, v in inputs.items()}
+
+        self._clean_memory()
 
         def _infer():
             with torch.no_grad():

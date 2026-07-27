@@ -353,14 +353,25 @@ class AutoTagService:
             generated_text = self._processor.batch_decode(
                 generated_ids, skip_special_tokens=False
             )[0]
-            return self._processor.post_process_generation(
+            result = self._processor.post_process_generation(
                 generated_text, task=task_token, image_size=image.size
             )
+            caption = result.get(task_token, "")
+            if not caption or not caption.strip():
+                logger.warning(
+                    "Empty caption — raw: %.200s", generated_text,
+                )
+                return None
+            return caption
 
-        result = await asyncio.to_thread(_infer)
-        caption = result.get(task_token, "")
+        caption = await asyncio.to_thread(_infer)
 
-        if not caption or not caption.strip():
+        if caption is None:
+            logger.info("Retrying inference...")
+            self._clean_memory()
+            caption = await asyncio.to_thread(_infer)
+
+        if caption is None:
             raise RuntimeError("Model returned empty caption")
 
         tags = [t.strip() for t in caption.split(",")]

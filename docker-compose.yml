@@ -6,12 +6,13 @@ services:
     volumes:
       - ./dataset:/data/dataset
       - thumb_cache:/data/thumbs
-      - hf_cache:/root/.cache/huggingface
+      - model_cache:/data/models
     environment:
       - CAPTIONER_DATASET_PATH=/data/dataset
       - CAPTIONER_THUMB_CACHE_PATH=/data/thumbs
       - CAPTIONER_THUMB_SIZE=512
       - CAPTIONER_HF_MODEL_NAME=MiaoshouAI/Florence-2-base-PromptGen
+      - CAPTIONER_MODEL_CACHE_DIR=/data/models
     deploy:
       resources:
         reservations:
@@ -24,7 +25,7 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
-      start_period: 120s
+      start_period: 10s
     restart: unless-stopped
 
   frontend:
@@ -38,4 +39,4 @@ services:
 
 volumes:
   thumb_cache:
-  hf_cache:
+  model_cache:

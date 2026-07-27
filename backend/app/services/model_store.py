@@ -7,6 +7,8 @@ from typing import Callable, Optional
 from huggingface_hub import hf_hub_download, list_repo_tree
 from huggingface_hub.hf_api import RepoFile
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -113,7 +115,5 @@ class ModelStore:
             "total_bytes": usage.total,
         }
 
-
-from app.config import settings
 
 model_store = ModelStore(cache_dir=settings.model_cache_dir)

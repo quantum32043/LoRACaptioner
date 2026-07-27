@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Sparkles, Download, Trash2, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -19,7 +19,6 @@ export default function AutoTagPanel() {
   const [showMenu, setShowMenu] = useState(false)
 
   const autoTagState = useDatasetStore((s) => s.autoTagState)
-  const autoTagDevice = useDatasetStore((s) => s.autoTagDevice)
   const autoTagGpuAvailable = useDatasetStore((s) => s.autoTagGpuAvailable)
   const autoTagTaskMode = useDatasetStore((s) => s.autoTagTaskMode)
   const autoTagModes = useDatasetStore((s) => s.autoTagModes)
@@ -35,7 +34,6 @@ export default function AutoTagPanel() {
 
   const [showGpuDialog, setShowGpuDialog] = useState(false)
   const [batchRunning, setBatchRunning] = useState(false)
-  const abortRef = useRef<AbortController | null>(null)
 
   useQuery({
     queryKey: ['auto-tag-status'],

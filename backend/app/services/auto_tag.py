@@ -256,7 +256,6 @@ class AutoTagService:
                 config = _mod_mod.Florence2Config.from_pretrained(
                     str(model_dir), local_files_only=True
                 )
-                config._attn_implementation = "eager"
 
                 model = _mod_mod.Florence2ForConditionalGeneration(config)
                 gc = GenerationConfig.from_model_config(config)
@@ -348,7 +347,7 @@ class AutoTagService:
                     pixel_values=inputs["pixel_values"],
                     max_new_tokens=512,
                     do_sample=False,
-                    num_beams=2,
+                    num_beams=1,
                 )
             generated_text = self._processor.batch_decode(
                 generated_ids, skip_special_tokens=False

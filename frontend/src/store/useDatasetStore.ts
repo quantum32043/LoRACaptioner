@@ -113,7 +113,10 @@ export const useDatasetStore = create<DatasetState>((set) => ({
     autoTagDownloaded: status.downloaded,
     autoTagLastError: status.last_error,
   }),
-  setAutoTagModes: (modes, current) => set({ autoTagModes: modes, autoTagTaskMode: current }),
+  setAutoTagModes: (modes, current) => set((state) => ({
+    autoTagModes: modes,
+    autoTagTaskMode: state.autoTagModes.length === 0 ? current : state.autoTagTaskMode,
+  })),
   setAutoTagTaskMode: (mode) => set({ autoTagTaskMode: mode }),
   setDownloadProgress: (p) => set({ downloadProgress: p }),
   setBatchTagProgress: (p) => set({ batchTagProgress: p }),

@@ -70,6 +70,17 @@ async def set_temperature(req: SetTemperatureRequest):
     return {"status": "ok", "temperature": auto_tag_service.temperature}
 
 
+@router.post("/load")
+async def load():
+    if auto_tag_service.state.value in ("downloading", "loading"):
+        raise HTTPException(status_code=409, detail=f"Model already in state: {auto_tag_service.state.value}")
+    try:
+        await auto_tag_service.ensure_ready()
+        return {"status": "ok", "state": auto_tag_service.state.value}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/unload")
 async def unload():
     auto_tag_service.unload()

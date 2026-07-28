@@ -163,6 +163,10 @@ export const api = {
     return fetchJson<{ status: string; state: string }>('/auto-tag/unload', { method: 'POST' })
   },
 
+  loadModel() {
+    return fetchJson<{ status: string; state: string }>('/auto-tag/load', { method: 'POST' })
+  },
+
   generateCaption(filename: string, task?: string, temperature?: number) {
     return fetchJson<AutoTagResult>('/auto-tag/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename, task, temperature }) })
   },

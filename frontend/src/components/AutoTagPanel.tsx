@@ -358,7 +358,7 @@ export default function AutoTagPanel() {
                   <>
                     <button
                       onClick={handleAutoAll}
-                      disabled={(autoTagState !== 'ready' && autoTagState !== 'unloaded') || batchRunning}
+                      disabled={batchRunning || autoTagState === 'unloaded'}
                       className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono bg-safe/20 text-safe border border-safe/40 rounded-md hover:bg-safe/30 disabled:opacity-50"
                     >
                       <Sparkles size={14} />
@@ -366,25 +366,39 @@ export default function AutoTagPanel() {
                     </button>
                     <button
                       onClick={handleAutoSelected}
-                      disabled={(autoTagState !== 'ready' && autoTagState !== 'unloaded') || batchRunning || effectiveSelection.length === 0}
+                      disabled={batchRunning || autoTagState === 'unloaded' || effectiveSelection.length === 0}
                       className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono bg-coal-800 text-paper-muted border border-coal-600 rounded-md hover:text-paper disabled:opacity-50"
                     >
                       <Sparkles size={14} />
                       Auto выбранные ({effectiveSelection.length})
                     </button>
-                    <button
-                      onClick={() => {
-                        manualUnloadRef.current = true
-                        api.unloadModel()
-                        queryClient.invalidateQueries({ queryKey: ['auto-tag-status'] })
-                        toast.success('Модель выгружена')
-                        setTimeout(() => { manualUnloadRef.current = false }, 2000)
-                      }}
-                      className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono text-paper-faint border border-coal-600 rounded-md hover:text-ember hover:border-ember/40"
-                    >
-                      <Trash2 size={14} />
-                      Выгрузить модель
-                    </button>
+                    {autoTagState === 'unloaded' ? (
+                      <button
+                        onClick={() => {
+                          api.loadModel()
+                          queryClient.invalidateQueries({ queryKey: ['auto-tag-status'] })
+                        }}
+                        disabled={batchRunning}
+                        className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono bg-cyano/20 text-cyano border border-cyano/40 rounded-md hover:bg-cyano/30 disabled:opacity-50"
+                      >
+                        <Download size={14} />
+                        Загрузить модель
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          manualUnloadRef.current = true
+                          api.unloadModel()
+                          queryClient.invalidateQueries({ queryKey: ['auto-tag-status'] })
+                          toast.success('Модель выгружена')
+                          setTimeout(() => { manualUnloadRef.current = false }, 2000)
+                        }}
+                        className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono text-paper-faint border border-coal-600 rounded-md hover:text-ember hover:border-ember/40"
+                      >
+                        <Trash2 size={14} />
+                        Выгрузить модель
+                      </button>
+                    )}
                   </>
                 )}
 

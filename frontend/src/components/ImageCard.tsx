@@ -22,7 +22,7 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
         <span className="font-mono text-xs uppercase tracking-wider text-paper-faint group-hover:text-safe transition-colors">FR·{num}</span>
       </div>
       <div className="aspect-[4/3] bg-coal-800 overflow-hidden">
-        <img src={item.thumb_url} alt={item.filename} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        <img src={item.thumb_url} alt={item.filename} loading="lazy" draggable={false} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
       </div>
       <div className="p-2 bg-coal-900 border-t border-coal-700">
         <div className="flex items-center gap-1.5 mb-1.5">

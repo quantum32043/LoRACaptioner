@@ -10,6 +10,7 @@ export default function ImageGrid() {
   const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
   const toggleSelection = useDatasetStore((s) => s.toggleSelection)
   const parentRef = useRef<HTMLDivElement>(null)
+  const dragHappenedRef = useRef(false)
 
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
@@ -46,8 +47,7 @@ export default function ImageGrid() {
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return
-    if ((e.target as HTMLElement).closest('button')) return
-    ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
     setDragStart({ x: e.clientX, y: e.clientY })
     setDragEnd({ x: e.clientX, y: e.clientY })
     setIsDragging(true)
@@ -69,6 +69,7 @@ export default function ImageGrid() {
     const dx = Math.abs(dragEnd.x - dragStart.x)
     const dy = Math.abs(dragEnd.y - dragStart.y)
     if (dx > 5 || dy > 5) {
+      dragHappenedRef.current = true
       const selLeft = Math.min(dragStart.x, dragEnd.x)
       const selTop = Math.min(dragStart.y, dragEnd.y)
       const selRight = Math.max(dragStart.x, dragEnd.x)
@@ -89,9 +90,9 @@ export default function ImageGrid() {
             toggleSelection(fn)
           }
         } else {
-          setSelected(toSelect[0])
-          for (let i = 1; i < toSelect.length; i++) {
-            toggleSelection(toSelect[i])
+          setSelected(null)
+          for (const fn of toSelect) {
+            toggleSelection(fn)
           }
         }
       }
@@ -137,6 +138,10 @@ export default function ImageGrid() {
                   isSelected={item.filename === selectedFilename}
                   isMultiSelected={selectedFilenames.includes(item.filename)}
                   onSelect={(e) => {
+                    if (dragHappenedRef.current) {
+                      dragHappenedRef.current = false
+                      return
+                    }
                     if (e.ctrlKey || e.metaKey) {
                       if (selectedFilename && selectedFilenames.length === 0 && item.filename !== selectedFilename) {
                         toggleSelection(selectedFilename)

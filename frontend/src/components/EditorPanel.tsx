@@ -74,9 +74,10 @@ export default function EditorPanel() {
 
   const { mutate: save, isPending: saving } = useMutation({
     mutationFn: ({ filename, caption }: { filename: string; caption: string }) => api.saveCaption(filename, caption),
-    onSuccess: () => {
+    onSuccess: (_, { filename, caption }) => {
       setDirty(false)
-      if (selectedItem) updateItem(selectedItem.filename, caption)
+      updateItem(filename, caption)
+      queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['stats'] })
     },
     onError: () => toast.error('Ошибка сохранения'),
@@ -186,10 +187,10 @@ export default function EditorPanel() {
 
   const { mutate: doAutoTag, isPending: autoTagging } = useMutation({
     mutationFn: (filename: string) => api.generateCaption(filename),
-    onSuccess: (data) => {
+    onSuccess: (data, filename) => {
       setCaption(data.caption)
       setDirty(true)
-      if (selectedItem) updateItem(selectedItem.filename, data.caption)
+      updateItem(filename, data.caption)
       queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['stats'] })
       toast.success('Теги сгенерированы')

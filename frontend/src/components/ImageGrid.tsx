@@ -137,20 +137,24 @@ export default function ImageGrid() {
                   index={idx}
                   isSelected={item.filename === selectedFilename}
                   isMultiSelected={selectedFilenames.includes(item.filename)}
-                  onSelect={(e) => {
-                    if (dragHappenedRef.current) {
-                      dragHappenedRef.current = false
-                      return
-                    }
-                    if (e.ctrlKey || e.metaKey) {
-                      if (selectedFilename && selectedFilenames.length === 0 && item.filename !== selectedFilename) {
-                        toggleSelection(selectedFilename)
+                    onSelect={(e) => {
+                      if (dragHappenedRef.current) {
+                        dragHappenedRef.current = false
+                        return
                       }
-                      toggleSelection(item.filename)
-                    } else {
-                      setSelected(item.filename)
-                    }
-                  }}
+                      if (e.ctrlKey || e.metaKey) {
+                        if (selectedFilename && selectedFilenames.length === 0 && item.filename !== selectedFilename) {
+                          toggleSelection(selectedFilename)
+                        }
+                        toggleSelection(item.filename)
+                      } else if (selectedFilenames.includes(item.filename)) {
+                        toggleSelection(item.filename)
+                      } else if (item.filename === selectedFilename) {
+                        setSelected(null)
+                      } else {
+                        setSelected(item.filename)
+                      }
+                    }}
                 />
               )
             })}

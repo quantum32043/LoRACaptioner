@@ -25,7 +25,6 @@ export default function EditorPanel() {
   const selectedFilename = useDatasetStore((s) => s.selectedFilename)
   const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
   const setSelected = useDatasetStore((s) => s.setSelected)
-  const clearSelection = useDatasetStore((s) => s.clearSelection)
   const setPanelOpen = useDatasetStore((s) => s.setPanelOpen)
   const updateItem = useDatasetStore((s) => s.updateItem)
   const total = useDatasetStore((s) => s.total)
@@ -291,7 +290,6 @@ export default function EditorPanel() {
               {(autoTagState === 'ready' || autoTagState === 'unloaded') && (
                 <button onClick={handleBatchAutoTag} disabled={batchAutoTagging} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-cyano/50 rounded-md text-cyano hover:bg-coal-700" title="Авто-теги выбранным"><Sparkles size={14} />{batchAutoTagging ? '...' : 'Auto'}</button>
               )}
-              <button onClick={clearSelection} className="text-xs font-mono text-paper-faint hover:text-paper border border-coal-600 px-2 py-0.5 rounded-md">Снять</button>
               <button onClick={() => setPanelOpen(false)} className="text-paper-faint hover:text-paper md:hidden"><X size={16} /></button>
             </div>
           </div>

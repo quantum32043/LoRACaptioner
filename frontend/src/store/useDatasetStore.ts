@@ -83,7 +83,7 @@ export const useDatasetStore = create<DatasetState>((set) => ({
           : [...state.selectedFilenames, filename],
       }
     }),
-  clearSelection: () => set({ selectedFilenames: [] }),
+  clearSelection: () => set({ selectedFilenames: [], selectedFilename: null }),
   setFilterUntagged: (v) => set({ filterUntagged: v }),
   setSearchQuery: (q) => set({ searchQuery: q }),
   setPanelOpen: (open) => set({ panelOpen: open }),

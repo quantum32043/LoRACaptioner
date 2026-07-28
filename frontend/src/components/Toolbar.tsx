@@ -1,13 +1,19 @@
-import { Search, Filter, PanelRightClose, Package } from 'lucide-react'
+import { Search, Filter, PanelRightClose, Package, X } from 'lucide-react'
 import { useDatasetStore } from '../store/useDatasetStore'
 import AutoTagPanel from './AutoTagPanel'
 
 export default function Toolbar({ onToggleBatch }: { onToggleBatch: () => void }) {
   const searchQuery = useDatasetStore((s) => s.searchQuery)
   const filterUntagged = useDatasetStore((s) => s.filterUntagged)
+  const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
+  const selectedFilename = useDatasetStore((s) => s.selectedFilename)
   const setSearchQuery = useDatasetStore((s) => s.setSearchQuery)
   const setFilterUntagged = useDatasetStore((s) => s.setFilterUntagged)
+  const clearSelection = useDatasetStore((s) => s.clearSelection)
   const setPanelOpen = useDatasetStore((s) => s.setPanelOpen)
+
+  const hasSelection = selectedFilenames.length > 0 || selectedFilename !== null
+  const selectionCount = selectedFilenames.length || (selectedFilename ? 1 : 0)
 
   return (
     <div className="flex items-center gap-2 px-4 h-12 border-b border-coal-700 bg-coal-900">
@@ -43,6 +49,16 @@ export default function Toolbar({ onToggleBatch }: { onToggleBatch: () => void }
       </button>
 
       <AutoTagPanel />
+
+      {hasSelection && (
+        <button
+          onClick={clearSelection}
+          className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono text-paper-faint hover:text-paper border border-coal-600 rounded-md shrink-0"
+        >
+          <X size={14} />
+          <span className="hidden sm:inline">Снять ({selectionCount})</span>
+        </button>
+      )}
 
       <button
         onClick={() => setPanelOpen(true)}

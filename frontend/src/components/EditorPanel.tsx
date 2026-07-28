@@ -190,6 +190,8 @@ export default function EditorPanel() {
       setCaption(data.caption)
       setDirty(true)
       if (selectedItem) updateItem(selectedItem.filename, data.caption)
+      queryClient.invalidateQueries({ queryKey: ['items'] })
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
       toast.success('Теги сгенерированы')
     },
     onError: () => toast.error('Ошибка генерации'),

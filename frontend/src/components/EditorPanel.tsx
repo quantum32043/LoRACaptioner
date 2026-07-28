@@ -450,7 +450,7 @@ export default function EditorPanel() {
                 }
               }}>
                 <SortableContext items={tags.map((_, i) => `tag-${i}`)} strategy={horizontalListSortingStrategy}>
-                  <div className="flex flex-wrap gap-1 mb-2">
+                  <div className="flex flex-wrap gap-1 mb-2 max-h-28 overflow-y-auto">
                     {tags.map((tag, i) =>
                       editingTagIdx === i ? (
                         <input

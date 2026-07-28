@@ -59,8 +59,11 @@ export default function AutoTagPanel() {
 
   const { mutate: doSetMode } = useMutation({
     mutationFn: (mode: string) => api.setAutoTagMode(mode),
-    onSuccess: (_, mode) => {
+    onMutate: (mode) => {
       useDatasetStore.getState().setAutoTagTaskMode(mode)
+    },
+    onError: () => {
+      toast.error('Ошибка при смене режима')
     },
   })
 

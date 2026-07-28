@@ -109,7 +109,6 @@ export const useDatasetStore = create<DatasetState>((set) => ({
     autoTagState: status.state as AutoTagState,
     autoTagDevice: status.device,
     autoTagModel: status.model,
-    autoTagTaskMode: status.task_mode,
     autoTagGpuAvailable: status.gpu_available,
     autoTagDownloaded: status.downloaded,
     autoTagLastError: status.last_error,

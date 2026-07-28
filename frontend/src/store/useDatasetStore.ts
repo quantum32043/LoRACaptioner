@@ -45,6 +45,7 @@ interface DatasetState {
   autoTagDevice: string | null
   autoTagModel: string | null
   autoTagTaskMode: string
+  autoTagTemperature: number
   autoTagGpuAvailable: boolean
   autoTagDownloaded: boolean
   autoTagLastError: string | null
@@ -56,6 +57,7 @@ interface DatasetState {
   setAutoTagStatus: (status: AutoTagStatus) => void
   setAutoTagModes: (modes: TaskMode[], current: string) => void
   setAutoTagTaskMode: (mode: string) => void
+  setAutoTagTemperature: (temp: number) => void
   setDownloadProgress: (p: DownloadProgressInfo | null) => void
   setBatchTagProgress: (p: BatchTagProgress | null) => void
   setBatchTagTotal: (t: number | null) => void
@@ -96,6 +98,7 @@ export const useDatasetStore = create<DatasetState>((set) => ({
   autoTagDevice: null,
   autoTagModel: null,
   autoTagTaskMode: 'generate_tags',
+  autoTagTemperature: 1.0,
   autoTagGpuAvailable: false,
   autoTagDownloaded: false,
   autoTagLastError: null,
@@ -109,6 +112,7 @@ export const useDatasetStore = create<DatasetState>((set) => ({
     autoTagState: status.state as AutoTagState,
     autoTagDevice: status.device,
     autoTagModel: status.model,
+    autoTagTemperature: status.temperature,
     autoTagGpuAvailable: status.gpu_available,
     autoTagDownloaded: status.downloaded,
     autoTagLastError: status.last_error,
@@ -118,6 +122,7 @@ export const useDatasetStore = create<DatasetState>((set) => ({
     autoTagTaskMode: state.autoTagModes.length === 0 ? current : state.autoTagTaskMode,
   })),
   setAutoTagTaskMode: (mode) => set({ autoTagTaskMode: mode }),
+  setAutoTagTemperature: (temp) => set({ autoTagTemperature: temp }),
   setDownloadProgress: (p) => set({ downloadProgress: p }),
   setBatchTagProgress: (p) => set({ batchTagProgress: p }),
   setBatchTagTotal: (t) => set({ batchTagTotal: t }),

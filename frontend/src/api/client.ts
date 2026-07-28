@@ -35,6 +35,7 @@ export interface AutoTagStatus {
   device: string | null
   model: string | null
   task_mode: string
+  temperature: number
   gpu_available: boolean
   downloaded: boolean
   last_error: string | null
@@ -154,31 +155,35 @@ export const api = {
     return fetchJson<{ status: string; mode: string }>('/auto-tag/set-mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }) })
   },
 
+  setAutoTagTemperature(temperature: number) {
+    return fetchJson<{ status: string; temperature: number }>('/auto-tag/set-temperature', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ temperature }) })
+  },
+
   unloadModel() {
     return fetchJson<{ status: string; state: string }>('/auto-tag/unload', { method: 'POST' })
   },
 
-  generateCaption(filename: string, task?: string) {
-    return fetchJson<AutoTagResult>('/auto-tag/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename, task }) })
+  generateCaption(filename: string, task?: string, temperature?: number) {
+    return fetchJson<AutoTagResult>('/auto-tag/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename, task, temperature }) })
   },
 
   downloadModelSSE(): AsyncGenerator<SSEMessage> {
     return fetchSSE('/auto-tag/download')
   },
 
-  generateBatchSSE(filenames: string[], task?: string): AsyncGenerator<SSEMessage> {
+  generateBatchSSE(filenames: string[], task?: string, temperature?: number): AsyncGenerator<SSEMessage> {
     return fetchSSE('/auto-tag/generate-batch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filenames, task }),
+      body: JSON.stringify({ filenames, task, temperature }),
     })
   },
 
-  generateUntaggedSSE(task?: string): AsyncGenerator<SSEMessage> {
+  generateUntaggedSSE(task?: string, temperature?: number): AsyncGenerator<SSEMessage> {
     return fetchSSE('/auto-tag/generate-untagged', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task }),
+      body: JSON.stringify({ task, temperature }),
     })
   },
 }

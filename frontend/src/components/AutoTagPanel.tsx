@@ -22,6 +22,7 @@ export default function AutoTagPanel() {
   const autoTagGpuAvailable = useDatasetStore((s) => s.autoTagGpuAvailable)
   const autoTagTaskMode = useDatasetStore((s) => s.autoTagTaskMode)
   const autoTagModes = useDatasetStore((s) => s.autoTagModes)
+  const autoTagTemperature = useDatasetStore((s) => s.autoTagTemperature)
   const downloadProgress = useDatasetStore((s) => s.downloadProgress)
   const batchTagProgress = useDatasetStore((s) => s.batchTagProgress)
   const gpuFallbackConfirmed = useDatasetStore((s) => s.gpuFallbackConfirmed)
@@ -74,6 +75,16 @@ export default function AutoTagPanel() {
     },
   })
 
+  const { mutate: doSetTemperature } = useMutation({
+    mutationFn: (temp: number) => api.setAutoTagTemperature(temp),
+    onMutate: (temp) => {
+      useDatasetStore.getState().setAutoTagTemperature(temp)
+    },
+    onError: () => {
+      toast.error('Ошибка при смене температуры')
+    },
+  })
+
   const stateLabel: Record<string, string> = {
     unavailable: 'Недоступна',
     not_downloaded: 'Не скачана',
@@ -121,8 +132,10 @@ export default function AutoTagPanel() {
   const runBatchUntagged = useCallback(async () => {
     setBatchRunning(true)
     try {
-      const taskMode = useDatasetStore.getState().autoTagTaskMode
-      for await (const msg of api.generateUntaggedSSE(taskMode)) {
+      const s = useDatasetStore.getState()
+      const taskMode = s.autoTagTaskMode
+      const temperature = s.autoTagTemperature
+      for await (const msg of api.generateUntaggedSSE(taskMode, temperature)) {
         if (msg.event === 'progress') {
           setBatchTagProgress(JSON.parse(msg.data))
         } else if (msg.event === 'result') {
@@ -158,8 +171,10 @@ export default function AutoTagPanel() {
     if (filenames.length === 0) return
     setBatchRunning(true)
     try {
-      const taskMode = useDatasetStore.getState().autoTagTaskMode
-      for await (const msg of api.generateBatchSSE(filenames, taskMode)) {
+      const s = useDatasetStore.getState()
+      const taskMode = s.autoTagTaskMode
+      const temperature = s.autoTagTemperature
+      for await (const msg of api.generateBatchSSE(filenames, taskMode, temperature)) {
         if (msg.event === 'progress') {
           setBatchTagProgress(JSON.parse(msg.data))
         } else if (msg.event === 'result') {
@@ -272,6 +287,27 @@ export default function AutoTagPanel() {
                     <option key={mode.id} value={mode.id}>{mode.label}</option>
                   ))}
                 </select>
+              </div>
+
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-mono text-xs text-paper-muted">Температура</label>
+                  <span className="font-mono text-xs text-paper-faint">{autoTagTemperature.toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="2.0"
+                  step="0.1"
+                  value={autoTagTemperature}
+                  onChange={(e) => doSetTemperature(parseFloat(e.target.value))}
+                  className="w-full h-1.5 bg-coal-700 rounded-full appearance-none cursor-pointer accent-cyano"
+                />
+                <div className="flex justify-between text-[10px] font-mono text-paper-faint mt-0.5">
+                  <span>0.1</span>
+                  <span>1.0</span>
+                  <span>2.0</span>
+                </div>
               </div>
 
               {autoTagState === 'loading' && (

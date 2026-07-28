@@ -187,8 +187,8 @@ export default function EditorPanel() {
 
   const { mutate: doAutoTag, isPending: autoTagging } = useMutation({
     mutationFn: (filename: string) => {
-      const mode = useDatasetStore.getState().autoTagTaskMode
-      return api.generateCaption(filename, mode)
+      const s = useDatasetStore.getState()
+      return api.generateCaption(filename, s.autoTagTaskMode, s.autoTagTemperature)
     },
     onSuccess: (data, filename) => {
       setCaption(data.caption)
@@ -213,17 +213,20 @@ export default function EditorPanel() {
   const [batchAutoTagging, setBatchAutoTagging] = useState(false)
 
   const handleBatchAutoTag = async () => {
-    if (selectedFilenames.length === 0) return
-    if (!autoTagGpuAvailable && !gpuFallbackConfirmed) {
+    const s = useDatasetStore.getState()
+    if (s.selectedFilenames.length === 0) return
+    if (!s.autoTagGpuAvailable && !s.gpuFallbackConfirmed) {
       setShowGpuDialog(true)
       return
     }
 
     setBatchAutoTagging(true)
-    const filenames = useDatasetStore.getState().selectedFilenames
+    const filenames = s.selectedFilenames
+    const taskMode = s.autoTagTaskMode
+    const temperature = s.autoTagTemperature
+    console.log('[AutoTag] mode from store:', taskMode)
     try {
-      const taskMode = useDatasetStore.getState().autoTagTaskMode
-      for await (const msg of api.generateBatchSSE(filenames, taskMode)) {
+      for await (const msg of api.generateBatchSSE(filenames, taskMode, temperature)) {
         if (msg.event === 'result') {
           const r = JSON.parse(msg.data)
           useDatasetStore.getState().updateItem(r.filename, r.caption)

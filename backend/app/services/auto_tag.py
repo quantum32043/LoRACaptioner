@@ -49,6 +49,7 @@ class AutoTagService:
         self._current_task_mode: str = "generate_tags"
         self._last_error: Optional[str] = None
         self._unload_delay: int = 300
+        self._temperature: float = 1.0
         self._gpu_available: bool = torch.cuda.is_available()
 
     @property
@@ -68,12 +69,21 @@ class AutoTagService:
         if mode in TASK_MODES:
             self._current_task_mode = mode
 
+    @property
+    def temperature(self) -> float:
+        return self._temperature
+
+    @temperature.setter
+    def temperature(self, value: float):
+        self._temperature = max(0.1, min(2.0, value))
+
     def get_status(self) -> dict:
         return {
             "state": self._state.value,
             "device": self._device,
             "model": settings.hf_model_name,
             "task_mode": self._current_task_mode,
+            "temperature": self._temperature,
             "gpu_available": self._gpu_available,
             "downloaded": model_store.is_downloaded(settings.hf_model_name),
             "last_error": self._last_error,
@@ -331,13 +341,14 @@ class AutoTagService:
         gc.collect()
 
     async def generate(
-        self, image_path: str, task: Optional[str] = None
+        self, image_path: str, task: Optional[str] = None, temperature: Optional[float] = None
     ) -> str:
         self._update_activity()
 
         await self.ensure_ready()
 
         task_token = TASK_MODES.get(task, TASK_MODES[self._current_task_mode])
+        temp = temperature if temperature is not None else self._temperature
 
         image = Image.open(image_path).convert("RGB")
         inputs = self._processor(text=task_token, images=image, return_tensors="pt")
@@ -351,7 +362,8 @@ class AutoTagService:
                     input_ids=inputs["input_ids"],
                     pixel_values=inputs["pixel_values"],
                     max_new_tokens=512,
-                    do_sample=False,
+                    do_sample=temp > 0,
+                    temperature=temp if temp > 0 else None,
                     num_beams=1,
                 )
             generated_text = self._processor.batch_decode(

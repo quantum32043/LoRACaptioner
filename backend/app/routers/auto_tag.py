@@ -24,19 +24,26 @@ router = APIRouter(prefix="/api/auto-tag", tags=["auto-tag"])
 class GenerateRequest(BaseModel):
     filename: str
     task: str | None = None
+    temperature: float | None = None
 
 
 class GenerateBatchRequest(BaseModel):
     filenames: list[str]
     task: str | None = None
+    temperature: float | None = None
 
 
 class GenerateUntaggedRequest(BaseModel):
     task: str | None = None
+    temperature: float | None = None
 
 
 class SetTaskModeRequest(BaseModel):
     mode: str
+
+
+class SetTemperatureRequest(BaseModel):
+    temperature: float
 
 
 @router.get("/status")
@@ -55,6 +62,12 @@ async def set_mode(req: SetTaskModeRequest):
         raise HTTPException(status_code=400, detail=f"Unknown mode: {req.mode}")
     auto_tag_service.task_mode = req.mode
     return {"status": "ok", "mode": req.mode}
+
+
+@router.post("/set-temperature")
+async def set_temperature(req: SetTemperatureRequest):
+    auto_tag_service.temperature = req.temperature
+    return {"status": "ok", "temperature": auto_tag_service.temperature}
 
 
 @router.post("/unload")
@@ -132,7 +145,7 @@ async def generate(req: GenerateRequest):
     image_path = f"{settings.dataset_path}/{req.filename}"
 
     try:
-        caption = await auto_tag_service.generate(image_path, task=req.task)
+        caption = await auto_tag_service.generate(image_path, task=req.task, temperature=req.temperature)
     except ModelNotDownloadedError:
         raise HTTPException(status_code=412, detail="Model not downloaded. Call /api/auto-tag/download first.")
     except RuntimeError as e:
@@ -166,7 +179,7 @@ async def generate_batch(req: GenerateBatchRequest):
                 await asyncio.sleep(0)
 
                 try:
-                    caption = await auto_tag_service.generate(image_path, task=req.task)
+                    caption = await auto_tag_service.generate(image_path, task=req.task, temperature=req.temperature)
                 except Exception as e:
                     logger.error(f"Failed to generate for {filename}: {e}")
                     errors += 1
@@ -209,5 +222,5 @@ async def generate_batch(req: GenerateBatchRequest):
 async def generate_untagged(req: GenerateUntaggedRequest):
     items, _ = dataset_service.get_items(only_untagged=True)
     filenames = [item.filename for item in items]
-    batch_req = GenerateBatchRequest(filenames=filenames, task=req.task)
+    batch_req = GenerateBatchRequest(filenames=filenames, task=req.task, temperature=req.temperature)
     return await generate_batch(batch_req)

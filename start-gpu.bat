@@ -66,7 +66,10 @@ if errorlevel 1 (
     exit /b
 )
 
-if exist frontend\dist\index.html goto :frontend_ready
+if exist frontend\dist\index.html (
+    powershell -Command "exit [int]((Get-Item 'frontend\dist\index.html').LastWriteTime -ge ((Get-ChildItem 'frontend\src' -Recurse -File | Measure-Object -Property LastWriteTime -Maximum).Maximum))"
+    if errorlevel 1 goto :skip_build
+)
 
 echo [*] Building frontend...
 cd frontend
@@ -101,6 +104,7 @@ pause
 exit /b
 
 :frontend_ready
+:skip_build
 
 :start_server
 echo.

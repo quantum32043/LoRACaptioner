@@ -118,13 +118,86 @@ export default function AutoTagPanel() {
     }
   }, [queryClient, setDownloadProgress])
 
+  const runBatchUntagged = useCallback(async () => {
+    setBatchRunning(true)
+    try {
+      const taskMode = useDatasetStore.getState().autoTagTaskMode
+      for await (const msg of api.generateUntaggedSSE(taskMode)) {
+        if (msg.event === 'progress') {
+          setBatchTagProgress(JSON.parse(msg.data))
+        } else if (msg.event === 'result') {
+          const r = JSON.parse(msg.data)
+          useDatasetStore.getState().updateItem(r.filename, r.caption)
+        } else if (msg.event === 'done') {
+          const d = JSON.parse(msg.data)
+          setBatchTagProgress(null)
+          queryClient.invalidateQueries({ queryKey: ['items'] })
+          queryClient.invalidateQueries({ queryKey: ['stats'] })
+          setBatchRunning(false)
+          if (d.errors > 0 && d.count > 0) {
+            toast.warning(`Обработано ${d.count}, ошибок ${d.errors}`)
+          } else if (d.errors > 0) {
+            toast.error(`Все ${d.errors} файлов с ошибкой`)
+          } else {
+            toast.success(`Теги добавлены для ${d.count} файлов`)
+          }
+        } else if (msg.event === 'error') {
+          const err = JSON.parse(msg.data)
+          toast.error(`Ошибка: ${err.filename} — ${err.error}`)
+        }
+      }
+    } catch (e) {
+      setBatchTagProgress(null)
+      setBatchRunning(false)
+      queryClient.invalidateQueries({ queryKey: ['items'] })
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+    }
+  }, [queryClient, setBatchTagProgress])
+
+  const runBatchSelected = useCallback(async (filenames: string[]) => {
+    if (filenames.length === 0) return
+    setBatchRunning(true)
+    try {
+      const taskMode = useDatasetStore.getState().autoTagTaskMode
+      for await (const msg of api.generateBatchSSE(filenames, taskMode)) {
+        if (msg.event === 'progress') {
+          setBatchTagProgress(JSON.parse(msg.data))
+        } else if (msg.event === 'result') {
+          const r = JSON.parse(msg.data)
+          useDatasetStore.getState().updateItem(r.filename, r.caption)
+        } else if (msg.event === 'done') {
+          const d = JSON.parse(msg.data)
+          setBatchTagProgress(null)
+          queryClient.invalidateQueries({ queryKey: ['items'] })
+          queryClient.invalidateQueries({ queryKey: ['stats'] })
+          setBatchRunning(false)
+          if (d.errors > 0 && d.count > 0) {
+            toast.warning(`Обработано ${d.count}, ошибок ${d.errors}`)
+          } else if (d.errors > 0) {
+            toast.error(`Все ${d.errors} файлов с ошибкой`)
+          } else {
+            toast.success(`Теги добавлены для ${d.count} файлов`)
+          }
+        } else if (msg.event === 'error') {
+          const err = JSON.parse(msg.data)
+          toast.error(`Ошибка: ${err.filename} — ${err.error}`)
+        }
+      }
+    } catch (e) {
+      setBatchTagProgress(null)
+      setBatchRunning(false)
+      queryClient.invalidateQueries({ queryKey: ['items'] })
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+    }
+  }, [queryClient, setBatchTagProgress])
+
   const handleAutoAll = useCallback(() => {
     if (!autoTagGpuAvailable && !gpuFallbackConfirmed) {
       setShowGpuDialog(true)
       return
     }
     runBatchUntagged()
-  }, [autoTagGpuAvailable, gpuFallbackConfirmed])
+  }, [autoTagGpuAvailable, gpuFallbackConfirmed, runBatchUntagged])
 
   const handleAutoSelected = useCallback(() => {
     const filenames = useDatasetStore.getState().selectedFilenames
@@ -139,83 +212,12 @@ export default function AutoTagPanel() {
       return
     }
     runBatchSelected(effective)
-  }, [autoTagGpuAvailable, gpuFallbackConfirmed])
+  }, [autoTagGpuAvailable, gpuFallbackConfirmed, runBatchSelected])
 
   const handleGpuConfirm = useCallback(() => {
     setShowGpuDialog(false)
     setGpuFallbackConfirmed(true)
   }, [setGpuFallbackConfirmed])
-
-  const runBatchUntagged = useCallback(async () => {
-    setBatchRunning(true)
-    try {
-      for await (const msg of api.generateUntaggedSSE(autoTagTaskMode)) {
-        if (msg.event === 'progress') {
-          setBatchTagProgress(JSON.parse(msg.data))
-        } else if (msg.event === 'result') {
-          const r = JSON.parse(msg.data)
-          useDatasetStore.getState().updateItem(r.filename, r.caption)
-        } else if (msg.event === 'done') {
-          const d = JSON.parse(msg.data)
-          setBatchTagProgress(null)
-          queryClient.invalidateQueries({ queryKey: ['items'] })
-          queryClient.invalidateQueries({ queryKey: ['stats'] })
-          setBatchRunning(false)
-          if (d.errors > 0 && d.count > 0) {
-            toast.warning(`Обработано ${d.count}, ошибок ${d.errors}`)
-          } else if (d.errors > 0) {
-            toast.error(`Все ${d.errors} файлов с ошибкой`)
-          } else {
-            toast.success(`Теги добавлены для ${d.count} файлов`)
-          }
-        } else if (msg.event === 'error') {
-          const err = JSON.parse(msg.data)
-          toast.error(`Ошибка: ${err.filename} — ${err.error}`)
-        }
-      }
-    } catch (e) {
-      setBatchTagProgress(null)
-      setBatchRunning(false)
-      queryClient.invalidateQueries({ queryKey: ['items'] })
-      queryClient.invalidateQueries({ queryKey: ['stats'] })
-    }
-  }, [autoTagTaskMode, queryClient, setBatchTagProgress])
-
-  const runBatchSelected = useCallback(async (filenames: string[]) => {
-    if (filenames.length === 0) return
-    setBatchRunning(true)
-    try {
-      for await (const msg of api.generateBatchSSE(filenames, autoTagTaskMode)) {
-        if (msg.event === 'progress') {
-          setBatchTagProgress(JSON.parse(msg.data))
-        } else if (msg.event === 'result') {
-          const r = JSON.parse(msg.data)
-          useDatasetStore.getState().updateItem(r.filename, r.caption)
-        } else if (msg.event === 'done') {
-          const d = JSON.parse(msg.data)
-          setBatchTagProgress(null)
-          queryClient.invalidateQueries({ queryKey: ['items'] })
-          queryClient.invalidateQueries({ queryKey: ['stats'] })
-          setBatchRunning(false)
-          if (d.errors > 0 && d.count > 0) {
-            toast.warning(`Обработано ${d.count}, ошибок ${d.errors}`)
-          } else if (d.errors > 0) {
-            toast.error(`Все ${d.errors} файлов с ошибкой`)
-          } else {
-            toast.success(`Теги добавлены для ${d.count} файлов`)
-          }
-        } else if (msg.event === 'error') {
-          const err = JSON.parse(msg.data)
-          toast.error(`Ошибка: ${err.filename} — ${err.error}`)
-        }
-      }
-    } catch (e) {
-      setBatchTagProgress(null)
-      setBatchRunning(false)
-      queryClient.invalidateQueries({ queryKey: ['items'] })
-      queryClient.invalidateQueries({ queryKey: ['stats'] })
-    }
-  }, [autoTagTaskMode, queryClient, setBatchTagProgress])
 
   const isIdle = autoTagState === 'ready' || autoTagState === 'unloaded'
   const pct = downloadProgress && downloadProgress.total_bytes > 0

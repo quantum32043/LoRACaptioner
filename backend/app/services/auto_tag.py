@@ -183,86 +183,64 @@ class AutoTagService:
                 _mod_mod.Florence2LanguagePreTrainedModel.__bases__ = (GenerationMixin, _mod_mod.PreTrainedModel)
 
                 # ── transformers 4.57.6 generation compatibility ────────────────────────
-                # Patch prepare_inputs_for_generation to handle the new KV cache format.
+                # Patch prepare_inputs_for_generation to handle the new KV cache format
+                # and pass inputs_embeds through (not included by default in this model).
                 def _patch_prepare_inputs(klass):
                     orig = klass.prepare_inputs_for_generation
                     def patched(self, decoder_input_ids, past_key_values=None, **kwargs):
                         if past_key_values is not None:
-                            if hasattr(past_key_values, 'self_attention_cache'):
-                                past_length = past_key_values.self_attention_cache[0][0].shape[2]
+                            if hasattr(past_key_values, 'get_seq_length'):
+                                past_length = past_key_values.get_seq_length()
                             else:
                                 past_length = past_key_values[0][0].shape[2]
                             if decoder_input_ids.shape[1] > past_length:
                                 decoder_input_ids = decoder_input_ids[:, past_length:]
                             else:
                                 decoder_input_ids = decoder_input_ids[:, -1:]
-                        return orig(self, decoder_input_ids, past_key_values=past_key_values, **kwargs)
+                            if past_length == 0:
+                                past_key_values = None
+                        result = orig(self, decoder_input_ids, past_key_values=past_key_values, **kwargs)
+                        if 'inputs_embeds' in kwargs:
+                            result['inputs_embeds'] = kwargs['inputs_embeds']
+                        return result
                     klass.prepare_inputs_for_generation = patched
                 _patch_prepare_inputs(_mod_mod.Florence2LanguageForConditionalGeneration)
                 _patch_prepare_inputs(_mod_mod.Florence2ForConditionalGeneration)
 
-                # can_generate() returns False due to PreTrainedModel name check in
-                # transformers >=4.50, so GenerationMixin.generate() is unavailable.
-                # Use our own generation loop instead.
-                def _patched_outer_generate(self, input_ids=None, inputs_embeds=None, pixel_values=None, **kw):
-                    import torch as _torch
-                    attention_mask = kw.get('attention_mask')
-                    if inputs_embeds is None:
-                        if input_ids is not None:
-                            inputs_embeds = self.get_input_embeddings()(input_ids)
-                        if pixel_values is not None:
-                            image_features = self._encode_image(pixel_values)
-                            inputs_embeds, attention_mask = self._merge_input_ids_with_image_features(image_features, inputs_embeds)
+                # Override can_generate to return True — the GenerationMixin base-patch
+                # at line 183 doesn't propagate MRO to subclasses in Python.
+                _mod_mod.Florence2LanguageForConditionalGeneration.can_generate = classmethod(lambda cls: True)
 
-                    encoder = self.language_model.get_encoder()
-                    encoder_outputs = encoder(inputs_embeds=inputs_embeds, attention_mask=attention_mask, return_dict=True)
-
-                    gc = self.generation_config
-                    start_id = gc.decoder_start_token_id
-                    eos_id = int(kw.get('eos_token_id', gc.eos_token_id))
-                    forced_bos_id = getattr(gc, 'forced_bos_token_id', None)
-                    max_new = kw.get('max_new_tokens', gc.max_new_tokens or 512)
-                    device = inputs_embeds.device
-                    batch_size = inputs_embeds.shape[0]
-
-                    decoder_ids = _torch.full((batch_size, 1), start_id, dtype=_torch.long, device=device)
-                    past_key_values = None
-
-                    for step in range(max_new):
-                        out = self.language_model(
-                            input_ids=None,
-                            attention_mask=attention_mask,
-                            decoder_input_ids=decoder_ids[:, -1:] if past_key_values is not None else decoder_ids,
-                            encoder_outputs=encoder_outputs,
-                            past_key_values=past_key_values,
-                            use_cache=True,
-                            return_dict=True,
-                        )
-                        logits = out.logits[:, -1, :]
-                        if _torch.isnan(logits).any() or _torch.isinf(logits).any():
-                            logger.error(
-                                "NaN/Inf logits step %d — max=%.4f min=%.4f top5=%s",
-                                step, logits.max().item(), logits.min().item(),
-                                logits.topk(5).indices.tolist(),
-                            )
-                            break
-                        topv, topi = logits.topk(5)
-                        if topi[0, 0].item() == 0:
-                            logger.warning(
-                                "argmax=0 (<s>) step %d — top5 values=%s top5 ids=%s",
-                                step, topv[0].tolist(), topi[0].tolist(),
-                            )
-                        if forced_bos_id is not None and step == 0 and decoder_ids.shape[1] == 1:
-                            next_token = _torch.full((batch_size, 1), forced_bos_id, dtype=_torch.long, device=device)
-                        else:
-                            next_token = logits.argmax(dim=-1, keepdim=True)
-                        decoder_ids = _torch.cat([decoder_ids, next_token], dim=-1)
-                        past_key_values = out.past_key_values
-                        if next_token.item() == eos_id:
-                            break
-
-                    return decoder_ids
-                _mod_mod.Florence2ForConditionalGeneration.generate = _patched_outer_generate
+                # Override generate() to delegate to self.language_model.generate()
+                # (GenerationMixin.generate), instead of a manual decoding loop — the official
+                # loop handles forced_bos, eos, KV cache, and device-specific edge cases correctly.
+                # Crucially, we must NOT pass input_ids=None as a keyword argument because
+                # GenerationMixin.generate() may try to read .shape[0] on it when determining
+                # batch size before falling back to inputs_embeds.
+                def _generate_wrapper(self, input_ids=None, inputs_embeds=None, pixel_values=None, **kw):
+                    import traceback
+                    logger.info("=== _generate_wrapper called ===")
+                    logger.info("input_ids type: %s", type(input_ids).__name__ if input_ids is not None else "None")
+                    logger.info("pixel_values type: %s", type(pixel_values).__name__ if pixel_values is not None else "None")
+                    try:
+                        if inputs_embeds is None:
+                            if input_ids is not None:
+                                inputs_embeds = self.get_input_embeddings()(input_ids)
+                            if pixel_values is not None:
+                                image_features = self._encode_image(pixel_values)
+                                inputs_embeds, _ = self._merge_input_ids_with_image_features(image_features, inputs_embeds)
+                        kw.pop('input_ids', None)
+                        kw['inputs_embeds'] = inputs_embeds
+                        logger.info("Calling language_model.generate with kw keys: %s", list(kw.keys()))
+                        if inputs_embeds is not None:
+                            logger.info("inputs_embeds shape: %s", inputs_embeds.shape)
+                        result = self.language_model.generate(**kw)
+                        logger.info("=== _generate_wrapper done ===")
+                        return result
+                    except Exception:
+                        logger.exception("_generate_wrapper failed")
+                        raise
+                _mod_mod.Florence2ForConditionalGeneration.generate = _generate_wrapper
 
                 config = _mod_mod.Florence2Config.from_pretrained(
                     str(model_dir), local_files_only=True
@@ -271,6 +249,7 @@ class AutoTagService:
 
                 model = _mod_mod.Florence2ForConditionalGeneration(config)
                 gc = GenerationConfig.from_model_config(config)
+                gc.forced_bos_token_id = 0
                 model.generation_config = gc
                 model.language_model.generation_config = gc
 

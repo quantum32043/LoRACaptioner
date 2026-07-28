@@ -186,7 +186,10 @@ export default function EditorPanel() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const { mutate: doAutoTag, isPending: autoTagging } = useMutation({
-    mutationFn: (filename: string) => api.generateCaption(filename),
+    mutationFn: (filename: string) => {
+      const mode = useDatasetStore.getState().autoTagTaskMode
+      return api.generateCaption(filename, mode)
+    },
     onSuccess: (data, filename) => {
       setCaption(data.caption)
       setDirty(true)
@@ -219,7 +222,8 @@ export default function EditorPanel() {
     setBatchAutoTagging(true)
     const filenames = useDatasetStore.getState().selectedFilenames
     try {
-      for await (const msg of api.generateBatchSSE(filenames)) {
+      const taskMode = useDatasetStore.getState().autoTagTaskMode
+      for await (const msg of api.generateBatchSSE(filenames, taskMode)) {
         if (msg.event === 'result') {
           const r = JSON.parse(msg.data)
           useDatasetStore.getState().updateItem(r.filename, r.caption)

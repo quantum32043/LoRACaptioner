@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Sparkles, Download, Trash2, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -36,15 +36,22 @@ export default function AutoTagPanel() {
 
   const [showGpuDialog, setShowGpuDialog] = useState(false)
   const [batchRunning, setBatchRunning] = useState(false)
+  const prevAutoTagState = useRef<string | null>(null)
+  const manualUnloadRef = useRef(false)
 
   useQuery({
     queryKey: ['auto-tag-status'],
     queryFn: async () => {
       const status = await api.getAutoTagStatus()
+      const newState = status.state
+      if (prevAutoTagState.current === 'ready' && newState === 'unloaded' && !manualUnloadRef.current) {
+        toast.info('Модель выгружена из-за отсутствия активности')
+      }
+      prevAutoTagState.current = newState
       setAutoTagStatus(status)
       return status
     },
-    refetchInterval: autoTagState === 'downloading' ? 2000 : 30000,
+    refetchInterval: (autoTagState === 'downloading' || autoTagState === 'loading') ? 2000 : 30000,
   })
 
   useQuery({
@@ -73,7 +80,7 @@ export default function AutoTagPanel() {
     downloading: 'Скачивание...',
     loading: 'Загрузка...',
     ready: 'Готова',
-    unloaded: 'Выгружена',
+    unloaded: 'Не загружена',
     error: 'Ошибка',
   }
 
@@ -241,12 +248,17 @@ export default function AutoTagPanel() {
           <>
             <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />
             <div className="absolute right-0 top-full mt-1 z-40 w-72 bg-coal-900 border border-coal-700 rounded-xl shadow-2xl p-4">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-1">
                 <span className="font-mono text-xs text-paper-muted">Авто-тегирование</span>
                 <span className={`font-mono text-xs ${stateColor[autoTagState]}`}>
                   {stateLabel[autoTagState]}
                 </span>
               </div>
+              {autoTagState === 'unloaded' && (
+                <p className="mb-3 text-xs font-mono text-paper-faint text-center">
+                  Модель загрузится автоматически при запуске
+                </p>
+              )}
 
               <div className="mb-3">
                 <select
@@ -259,6 +271,13 @@ export default function AutoTagPanel() {
                   ))}
                 </select>
               </div>
+
+              {autoTagState === 'loading' && (
+                <div className="mb-3 flex items-center gap-2 text-xs font-mono text-cyano">
+                  <RotateCw size={12} className="animate-spin" />
+                  <span>Загрузка модели...</span>
+                </div>
+              )}
 
               {downloadProgress && (
                 <div className="mb-3">
@@ -317,9 +336,11 @@ export default function AutoTagPanel() {
                     </button>
                     <button
                       onClick={() => {
+                        manualUnloadRef.current = true
                         api.unloadModel()
                         queryClient.invalidateQueries({ queryKey: ['auto-tag-status'] })
                         toast.success('Модель выгружена')
+                        setTimeout(() => { manualUnloadRef.current = false }, 2000)
                       }}
                       className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono text-paper-faint border border-coal-600 rounded-md hover:text-ember hover:border-ember/40"
                     >

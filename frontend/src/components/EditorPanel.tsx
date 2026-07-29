@@ -67,6 +67,36 @@ export default function EditorPanel() {
   const gpuFallbackConfirmed = useDatasetStore((s) => s.gpuFallbackConfirmed)
   const setGpuFallbackConfirmed = useDatasetStore((s) => s.setGpuFallbackConfirmed)
 
+  const asideRef = useRef<HTMLDivElement>(null)
+  const [editorHeight, setEditorHeight] = useState(180)
+  const resizing = useRef(false)
+
+  const handleEditorResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    resizing.current = true
+    const startY = e.clientY
+    const startH = editorHeight
+
+    const onMove = (ev: MouseEvent) => {
+      if (!resizing.current) return
+      const aside = asideRef.current
+      if (!aside) return
+      const asideBottom = aside.getBoundingClientRect().bottom
+      const maxH = asideBottom - ev.clientY - 10
+      const newH = Math.max(80, Math.min(maxH, startH + (startY - ev.clientY)))
+      setEditorHeight(newH)
+    }
+
+    const onUp = () => {
+      resizing.current = false
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [editorHeight])
+
   const selectedItem = items.find((i) => i.filename === selectedFilename)
   const [caption, setCaption] = useState('')
   const captionRef = useRef(caption)
@@ -315,7 +345,7 @@ export default function EditorPanel() {
         </div>
       )}
 
-      <aside className="w-full md:w-80 lg:w-96 xl:w-[440px] border-l border-coal-700 bg-coal-900 flex flex-col overflow-hidden">
+      <aside ref={asideRef} className="w-full md:w-80 lg:w-96 xl:w-[440px] border-l border-coal-700 bg-coal-900 flex flex-col overflow-hidden">
         {isBatch ? (
           <div className="px-4 py-2 border-b border-coal-700 flex items-center justify-between gap-2">
             <span className="font-mono text-xs text-cyano truncate">selected {selectedFilenames.length} / {total}</span>
@@ -430,8 +460,31 @@ export default function EditorPanel() {
               </div>
             )}
           </div>
+        ) : isBatch ? (
+          <div className="px-4 py-3 border-t border-coal-700">
+            <div className="flex items-center gap-2 mb-2">
+              <select
+                value={batchMode}
+                onChange={(e) => setBatchMode(e.target.value as 'append' | 'prepend' | 'set')}
+                className="bg-coal-800 text-paper text-xs font-mono border border-coal-600 rounded-md px-2 py-1"
+              >
+                <option value="append">Append</option>
+                <option value="prepend">Prepend</option>
+                <option value="set">Replace</option>
+              </select>
+              <span className="font-mono text-xs text-paper-faint">for {selectedFilenames.length} frames</span>
+            </div>
+            <div className="space-y-2">
+              <textarea
+                value={caption}
+                onChange={(e) => { setCaption(e.target.value); setDirty(true) }}
+                className="w-full h-32 bg-coal-800 text-paper text-sm font-mono p-2 rounded-md border border-coal-600 outline-none resize-none placeholder-paper-faint"
+                placeholder="Enter caption..."
+              />
+            </div>
+          </div>
         ) : (
-          <>
+          <div className="flex flex-col flex-1 overflow-hidden">
             <div className="px-4 py-2 border-b border-coal-700">
               <p className="font-mono text-xs text-paper-faint truncate">{selectedItem!.filename}</p>
             </div>
@@ -447,98 +500,89 @@ export default function EditorPanel() {
                 </TransformComponent>
               </TransformWrapper>
             </div>
-          </>
-        )}
 
-        <div className="px-4 py-3 border-t border-coal-700">
-          <div className="flex items-center gap-2 mb-2">
-            {isBatch && (
-              <>
-                <select
-                  value={batchMode}
-                  onChange={(e) => setBatchMode(e.target.value as 'append' | 'prepend' | 'set')}
-                  className="bg-coal-800 text-paper text-xs font-mono border border-coal-600 rounded-md px-2 py-1"
-                >
-                  <option value="append">Append</option>
-                  <option value="prepend">Prepend</option>
-                  <option value="set">Replace</option>
-                </select>
-                <span className="font-mono text-xs text-paper-faint">for {selectedFilenames.length} frames</span>
-              </>
-            )}
-          </div>
-          {tagMode && !isBatch ? (
-            <div>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => {
-                const { active, over } = e
-                if (over && active.id !== over.id) {
-                  const oldIdx = tags.findIndex((_, i) => `tag-${i}` === active.id)
-                  const newIdx = tags.findIndex((_, i) => `tag-${i}` === over.id)
-                  if (oldIdx !== -1 && newIdx !== -1) {
-                    const newTags = [...tags]
-                    const [moved] = newTags.splice(oldIdx, 1)
-                    newTags.splice(newIdx, 0, moved)
-                    setCaption(newTags.join(', '))
-                    setDirty(true)
-                  }
-                }
-              }}>
-                <SortableContext items={tags.map((_, i) => `tag-${i}`)} strategy={horizontalListSortingStrategy}>
-                  <div className="flex flex-wrap gap-1 mb-2 max-h-28 overflow-y-auto">
-                    {tags.map((tag, i) =>
-                      editingTagIdx === i ? (
-                        <input
-                          key={`tag-${i}`}
-                          value={editTagValue}
-                          onChange={(e) => setEditTagValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault()
-                              const trimmed = editTagValue.trim()
-                              const newTags = [...tags]
-                              newTags[i] = trimmed
-                              setCaption(newTags.join(', '))
-                              setDirty(true)
-                              setEditingTagIdx(null)
-                            }
-                            if (e.key === 'Escape') setEditingTagIdx(null)
-                          }}
-                          onBlur={() => setEditingTagIdx(null)}
-                          autoFocus
-                          className="inline-flex px-2 py-0.5 rounded-md text-xs font-mono border border-cyano bg-coal-900 text-paper outline-none w-32"
-                        />
-                      ) : (
-                        <TagChip key={`tag-${i}`} id={`tag-${i}`} tag={tag} onRemove={() => handleRemoveTag(i)} onEdit={() => { setEditingTagIdx(i); setEditTagValue(tag) }} />
-                      )
-                    )}
-                  </div>
-                </SortableContext>
-              </DndContext>
-              <input
-                type="text"
-                placeholder="Add tag and press Enter..."
-                onKeyDown={handleAddTag}
-                onKeyUp={(e) => { if (e.key === 'Backspace' && !e.currentTarget.value) { handleRemoveTag(tags.length - 1) } }}
-                className="w-full bg-transparent text-sm text-paper placeholder-paper-faint outline-none font-mono"
-              />
+            <div
+              onMouseDown={handleEditorResizeStart}
+              className="h-2 cursor-row-resize shrink-0 relative group"
+            >
+              <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-0.5 rounded-full bg-coal-600 group-hover:bg-coal-500 transition-colors" />
             </div>
-          ) : (
-            <div className="space-y-2">
-              <textarea
-                value={caption}
-                onChange={(e) => { setCaption(e.target.value); setDirty(true) }}
-                className="w-full h-32 bg-coal-800 text-paper text-sm font-mono p-2 rounded-md border border-coal-600 outline-none resize-none placeholder-paper-faint"
-                placeholder="Enter caption..."
-              />
-              {triggerWords.length > 0 && caption && (
-                <div className="font-mono text-xs text-paper-muted leading-snug p-2 bg-coal-800/50 rounded-md border border-coal-700">
-                  <span className="text-paper-faint mr-1.5">preview:</span>
-                  {highlightCaptionEditor(caption, triggerWords)}
+
+            <div style={{ height: editorHeight }} className="shrink-0 overflow-y-auto border-t border-coal-700 px-4 py-3">
+              {tagMode ? (
+                <div>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => {
+                    const { active, over } = e
+                    if (over && active.id !== over.id) {
+                      const oldIdx = tags.findIndex((_, i) => `tag-${i}` === active.id)
+                      const newIdx = tags.findIndex((_, i) => `tag-${i}` === over.id)
+                      if (oldIdx !== -1 && newIdx !== -1) {
+                        const newTags = [...tags]
+                        const [moved] = newTags.splice(oldIdx, 1)
+                        newTags.splice(newIdx, 0, moved)
+                        setCaption(newTags.join(', '))
+                        setDirty(true)
+                      }
+                    }
+                  }}>
+                    <SortableContext items={tags.map((_, i) => `tag-${i}`)} strategy={horizontalListSortingStrategy}>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {tags.map((tag, i) =>
+                          editingTagIdx === i ? (
+                            <input
+                              key={`tag-${i}`}
+                              value={editTagValue}
+                              onChange={(e) => setEditTagValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  const trimmed = editTagValue.trim()
+                                  const newTags = [...tags]
+                                  newTags[i] = trimmed
+                                  setCaption(newTags.join(', '))
+                                  setDirty(true)
+                                  setEditingTagIdx(null)
+                                }
+                                if (e.key === 'Escape') setEditingTagIdx(null)
+                              }}
+                              onBlur={() => setEditingTagIdx(null)}
+                              autoFocus
+                              className="inline-flex px-2 py-0.5 rounded-md text-xs font-mono border border-cyano bg-coal-900 text-paper outline-none w-32"
+                            />
+                          ) : (
+                            <TagChip key={`tag-${i}`} id={`tag-${i}`} tag={tag} onRemove={() => handleRemoveTag(i)} onEdit={() => { setEditingTagIdx(i); setEditTagValue(tag) }} />
+                          )
+                        )}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                  <input
+                    type="text"
+                    placeholder="Add tag and press Enter..."
+                    onKeyDown={handleAddTag}
+                    onKeyUp={(e) => { if (e.key === 'Backspace' && !e.currentTarget.value) { handleRemoveTag(tags.length - 1) } }}
+                    className="w-full bg-transparent text-sm text-paper placeholder-paper-faint outline-none font-mono"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <textarea
+                    value={caption}
+                    onChange={(e) => { setCaption(e.target.value); setDirty(true) }}
+                    className="w-full h-32 bg-coal-800 text-paper text-sm font-mono p-2 rounded-md border border-coal-600 outline-none resize-none placeholder-paper-faint"
+                    placeholder="Enter caption..."
+                  />
+                  {triggerWords.length > 0 && caption && (
+                    <div className="font-mono text-xs text-paper-muted leading-snug p-2 bg-coal-800/50 rounded-md border border-coal-700">
+                      <span className="text-paper-faint mr-1.5">preview:</span>
+                      {highlightCaptionEditor(caption, triggerWords)}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </aside>
     </>
   )

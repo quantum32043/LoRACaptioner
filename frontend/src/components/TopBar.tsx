@@ -184,10 +184,10 @@ export default function TopBar() {
             <p className="font-mono text-sm text-paper-muted mb-5">
               The selected folder contains <span className="text-paper">{pendingFiles.length}</span> files.
             </p>
-            <div className="flex items-center justify-end gap-3">
-              <button onClick={() => setPendingFiles(null)} className="px-4 py-2 text-xs font-mono text-paper-muted border border-coal-600 rounded-md hover:text-paper">Cancel</button>
-              <button onClick={handleAppend} className="px-4 py-2 text-xs font-mono bg-coal-800 text-paper border border-coal-600 rounded-md hover:bg-coal-700">Append</button>
-              <button onClick={handleReplace} className="px-4 py-2 text-xs font-mono bg-ember/20 text-ember border border-ember/50 rounded-md hover:bg-ember/30 font-semibold">Replace</button>
+            <div className="flex items-center justify-center gap-4">
+              <button onClick={() => setPendingFiles(null)} className="px-5 py-2 text-xs font-mono text-paper-muted border border-coal-600 rounded-md hover:text-paper">Cancel</button>
+              <button onClick={handleAppend} className="px-5 py-2 text-xs font-mono bg-coal-800 text-paper border border-coal-600 rounded-md hover:bg-coal-700">Append</button>
+              <button onClick={handleReplace} className="px-5 py-2 text-xs font-mono bg-ember/20 text-ember border border-ember/50 rounded-md hover:bg-ember/30 font-semibold">Replace</button>
             </div>
           </div>
         </div>

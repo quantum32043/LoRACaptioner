@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from pathlib import Path
-from app.models import BatchRequest, ItemsResponse, Stats, StatusResponse, BatchResponse, RescanResponse
+from app.models import BatchRequest, TriggerAddRequest, ItemsResponse, Stats, StatusResponse, BatchResponse, RescanResponse
 from app.services.dataset import dataset_service
 from app.config import settings
 from app.utils import safe_join
@@ -47,6 +47,17 @@ async def batch_operation(body: BatchRequest) -> BatchResponse:
         filenames=body.filenames, only_untagged=body.only_untagged,
     )
     return BatchResponse(**result)
+
+@router.post("/trigger-add")
+async def trigger_add(body: TriggerAddRequest) -> BatchResponse:
+    result = await dataset_service.add_trigger_words(
+        trigger_words=body.trigger_words,
+        position=body.position,
+        filenames=body.filenames,
+        only_untagged=body.only_untagged,
+    )
+    return BatchResponse(**result)
+
 
 @router.post("/rescan")
 async def rescan() -> RescanResponse:

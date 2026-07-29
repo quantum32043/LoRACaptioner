@@ -38,6 +38,13 @@ class BatchResponse(BaseModel):
     total: int
 
 
+class TriggerAddRequest(BaseModel):
+    trigger_words: list[str]
+    position: str = Field(default="prepend", pattern=r"^(prepend|append)$")
+    filenames: Optional[list[str]] = None
+    only_untagged: bool = False
+
+
 class RescanResponse(BaseModel):
     status: str
     total: int

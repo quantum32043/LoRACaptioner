@@ -142,4 +142,44 @@ class DatasetService:
                     pass
         return {"changed": changed, "total": len(items_to_process)}
 
+    async def add_trigger_words(
+        self,
+        trigger_words: list[str],
+        position: str = "prepend",
+        filenames: list[str] | None = None,
+        only_untagged: bool = False,
+    ) -> dict:
+        self.ensure_scanned()
+        changed = 0
+        items_to_process = [self._items[f] for f in filenames if f in self._items] if filenames is not None else list(self._items.values())
+        for item in items_to_process:
+            if only_untagged and item.tagged:
+                continue
+            original = item.caption
+            tags = [t.strip() for t in original.split(",")] if original.strip() else []
+            tags_lower = [t.lower() for t in tags]
+            new_tags = list(tags)
+            added = False
+            for tw in trigger_words:
+                tw_stripped = tw.strip()
+                if not tw_stripped:
+                    continue
+                if tw_stripped.lower() not in tags_lower:
+                    if position == "prepend":
+                        new_tags.insert(0, tw_stripped)
+                    else:
+                        new_tags.append(tw_stripped)
+                    tags_lower.insert(0 if position == "prepend" else len(tags_lower), tw_stripped.lower())
+                    added = True
+            if not added:
+                continue
+            new_caption = ", ".join(new_tags)
+            item.caption = new_caption
+            item.tagged = bool(new_caption)
+            changed += 1
+            txt_path = os.path.join(settings.dataset_path, Path(item.filename).stem + ".txt")
+            async with aiofiles.open(txt_path, mode="w", encoding="utf-8") as f:
+                await f.write(new_caption)
+        return {"changed": changed, "total": len(items_to_process)}
+
 dataset_service = DatasetService()

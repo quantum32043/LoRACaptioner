@@ -23,10 +23,28 @@ function App() {
   const setAutoTagStatus = useDatasetStore((s) => s.setAutoTagStatus)
   const setAutoTagModes = useDatasetStore((s) => s.setAutoTagModes)
 
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery)
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 250)
+    return () => clearTimeout(t)
+  }, [searchQuery])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (batchOpen) setBatchOpen(false)
+        if (triggerPanelOpen) setTriggerPanelOpen(false)
+        if (panelOpen) setPanelOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [batchOpen, triggerPanelOpen, panelOpen, setTriggerPanelOpen, setPanelOpen])
+
   const onlyUntagged = datasetFilter === 'untagged'
   const { data } = useQuery({
-    queryKey: ['items', onlyUntagged, searchQuery],
-    queryFn: () => api.getItems(0, 20000, onlyUntagged, searchQuery || undefined),
+    queryKey: ['items', onlyUntagged, debouncedSearch],
+    queryFn: () => api.getItems(0, 20000, onlyUntagged, debouncedSearch || undefined),
     placeholderData: (prev) => prev,
   })
 

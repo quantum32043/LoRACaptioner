@@ -12,11 +12,7 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
       ? 'border-safe ring-1 ring-safe/50 translate-y-[-2px]'
       : 'border-coal-700 hover:border-coal-500'
 
-  const triggerRing = !tr || tr.status === 'exact'
-    ? ''
-    : tr.status === 'missing'
-      ? 'ring-2 ring-inset ring-ember/80'
-      : 'ring-2 ring-inset ring-safe/80'
+  const showTrigger = tr && tr.status !== 'exact'
 
   return (
     <button
@@ -32,7 +28,13 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
       <div className="h-6 bg-coal-800 flex items-center px-2 border-b border-coal-700">
         <span className="font-mono text-xs uppercase tracking-wider text-paper-faint group-hover:text-safe transition-colors">FR·{num}</span>
       </div>
-      <div className={`aspect-[4/3] bg-coal-800 overflow-hidden ${triggerRing}`}>
+      <div className={`aspect-[4/3] bg-coal-800 overflow-hidden relative ${
+        showTrigger
+          ? tr.status === 'missing'
+            ? 'outline outline-[3px] outline-ember outline-offset-[-3px]'
+            : 'outline outline-[3px] outline-safe outline-offset-[-3px]'
+          : ''
+      }`}>
         <img src={item.thumb_url} alt={item.filename} loading="lazy" draggable={false} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
       </div>
       <div className={`p-2 border-t transition-colors ${

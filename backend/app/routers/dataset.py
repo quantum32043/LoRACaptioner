@@ -95,6 +95,11 @@ async def export_dataset():
     )
 
 
+@router.post("/clear")
+async def clear_dataset() -> dict:
+    removed = dataset_service.clear_dataset()
+    return {"status": "ok", "removed": removed}
+
 @router.post("/rescan")
 async def rescan() -> RescanResponse:
     total = dataset_service.rescan()

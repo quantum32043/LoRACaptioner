@@ -12,6 +12,7 @@ export default function TopBar() {
   const [uploading, setUploading] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [progress, setProgress] = useState({ current: 0, total: 0 })
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
   const setItems = useDatasetStore((s) => s.setItems)
 
   const { data: stats, refetch } = useQuery({
@@ -37,11 +38,7 @@ export default function TopBar() {
     onSuccess: () => refetch(),
   })
 
-  const handleFolderPick = useCallback(async () => {
-    const fileList = inputRef.current?.files
-    if (!fileList || fileList.length === 0) return
-
-    const files = Array.from(fileList)
+  const uploadFiles = useCallback(async (files: File[]) => {
     setUploading(true)
     setProgress({ current: 0, total: files.length })
 
@@ -69,6 +66,40 @@ export default function TopBar() {
     setUploading(false)
     toast.success(`Uploaded ${totalSaved} files. Total in dataset: ${newData.total}`)
   }, [refetch, setItems])
+
+  const handleFolderPick = useCallback(async () => {
+    const fileList = inputRef.current?.files
+    if (!fileList || fileList.length === 0) return
+
+    const files = Array.from(fileList)
+
+    if (total > 0) {
+      setPendingFiles(files)
+      return
+    }
+
+    await uploadFiles(files)
+    inputRef.current!.value = ''
+  }, [total, uploadFiles])
+
+  const handleReplace = async () => {
+    const files = pendingFiles
+    setPendingFiles(null)
+    if (!files) return
+    try {
+      await fetch('/api/dataset/clear', { method: 'POST' })
+    } catch { /* ignore */ }
+    await uploadFiles(files)
+    inputRef.current!.value = ''
+  }
+
+  const handleAppend = async () => {
+    const files = pendingFiles
+    setPendingFiles(null)
+    if (!files) return
+    await uploadFiles(files)
+    inputRef.current!.value = ''
+  }
 
   const handleExport = async () => {
     setExporting(true)
@@ -142,6 +173,25 @@ export default function TopBar() {
           <span className="hidden md:inline">{exporting ? '...' : 'Export'}</span>
         </button>
       </div>
+
+      {pendingFiles && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setPendingFiles(null)}>
+          <div className="bg-coal-900 border border-coal-700 rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display text-lg text-paper mb-2">Dataset already open</h3>
+            <p className="font-mono text-sm text-paper-muted mb-1">
+              Current dataset has <span className="text-paper">{total}</span> files.
+            </p>
+            <p className="font-mono text-sm text-paper-muted mb-5">
+              The selected folder contains <span className="text-paper">{pendingFiles.length}</span> files.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button onClick={() => setPendingFiles(null)} className="px-4 py-2 text-xs font-mono text-paper-muted border border-coal-600 rounded-md hover:text-paper">Cancel</button>
+              <button onClick={handleAppend} className="px-4 py-2 text-xs font-mono bg-coal-800 text-paper border border-coal-600 rounded-md hover:bg-coal-700">Append</button>
+              <button onClick={handleReplace} className="px-4 py-2 text-xs font-mono bg-ember/20 text-ember border border-ember/50 rounded-md hover:bg-ember/30 font-semibold">Replace</button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   )
 }

@@ -187,4 +187,19 @@ class DatasetService:
                 await f.write(new_caption)
         return {"changed": changed, "total": len(items_to_process)}
 
+    def clear_dataset(self) -> int:
+        dataset_path = Path(settings.dataset_path)
+        if not dataset_path.exists():
+            return 0
+        count = 0
+        for entry in dataset_path.iterdir():
+            if entry.is_file():
+                ext = entry.suffix.lower()
+                if ext in SUPPORTED_EXTENSIONS or ext == ".txt":
+                    entry.unlink()
+                    count += 1
+        self._items.clear()
+        self._scanned = False
+        return count
+
 dataset_service = DatasetService()

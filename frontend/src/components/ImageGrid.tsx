@@ -23,7 +23,10 @@ export default function ImageGrid() {
   const filteredItems = useMemo(() => {
     if (datasetFilter === 'all') return items
     if (datasetFilter === 'untagged') return items.filter((i) => !i.tagged)
-    if (triggerWords.length === 0) return items
+    if (triggerWords.length === 0) {
+      if (datasetFilter === 'has_trigger' || datasetFilter === 'trigger_warning') return []
+      return items
+    }
     return items.filter((item) => {
       const r = triggerResults[item.filename]
       if (datasetFilter === 'has_trigger') return r?.status === 'exact'

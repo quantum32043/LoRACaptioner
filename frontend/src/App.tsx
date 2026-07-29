@@ -23,9 +23,10 @@ function App() {
   const setAutoTagStatus = useDatasetStore((s) => s.setAutoTagStatus)
   const setAutoTagModes = useDatasetStore((s) => s.setAutoTagModes)
 
+  const onlyUntagged = datasetFilter === 'untagged'
   const { data } = useQuery({
-    queryKey: ['items', datasetFilter, searchQuery],
-    queryFn: () => api.getItems(0, 20000, datasetFilter === 'untagged', searchQuery || undefined),
+    queryKey: ['items', onlyUntagged, searchQuery],
+    queryFn: () => api.getItems(0, 20000, onlyUntagged, searchQuery || undefined),
     placeholderData: (prev) => prev,
   })
 

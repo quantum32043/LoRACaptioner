@@ -2,6 +2,8 @@
 
 A local web tool for annotating image datasets used for training LoRA models (Stable Diffusion / SDXL / Flux). Works directly with the canonical kohya_ss / ai-toolkit format: a folder where each image has a same-named `.txt` file with its caption next to it.
 
+![LoRA Captioner screenshot](docs/assets/preview.png)
+
 ---
 
 ## Features

@@ -24,13 +24,13 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
         </div>
       )}
       {tr && tr.status !== 'exact' && (
-        <div className={`absolute top-2 left-2 z-10 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-mono border shadow-lg ${
+        <div className={`absolute top-2 left-2 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-mono font-bold border-2 shadow-xl ${
           tr.status === 'missing'
-            ? 'bg-ember/20 text-ember border-ember/50'
-            : 'bg-safe/20 text-safe border-safe/50'
+            ? 'bg-ember text-white border-ember/80'
+            : 'bg-safe text-coal-950 border-safe/80'
         }`}>
-          {tr.status === 'missing' ? <AlertCircle size={14} /> : <AlertTriangle size={14} />}
-          <span>{tr.status === 'missing' ? 'нет' : 'ошибка'}</span>
+          {tr.status === 'missing' ? <AlertCircle size={16} /> : <AlertTriangle size={16} />}
+          <span>{tr.status === 'missing' ? 'НЕТ' : 'ОШИБКА'}</span>
         </div>
       )}
       <div className="h-6 bg-coal-800 flex items-center px-2 border-b border-coal-700">

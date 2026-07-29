@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { FolderUp, Search } from 'lucide-react'
 import { useDatasetStore } from '../store/useDatasetStore'
 import ImageCard from './ImageCard'
 
@@ -147,75 +148,95 @@ export default function ImageGrid() {
     }
   }, [getCardRect])
 
+  const total = useDatasetStore((s) => s.total)
+
   return (
     <div
       ref={parentRef}
       className="flex-1 overflow-auto p-4 select-none"
     >
-      <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
-        {virtualizer.getVirtualItems().map((virtualRow) => (
-          <div
-            key={virtualRow.key}
-            className="grid gap-3"
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: virtualRow.size,
-              transform: `translateY(${virtualRow.start}px)`,
-              gridTemplateColumns: `repeat(${cols}, 1fr)`,
-            }}
-          >
-            {Array.from({ length: cols }).map((_, col) => {
-              const idx = virtualRow.index * cols + col
-              const item = filteredItems[idx]
-              if (!item) return <div key={col} />
-              return (
-                <ImageCard
-                  key={item.filename}
-                  item={item}
-                  index={idx}
-                  isSelected={item.filename === selectedFilename}
-                  isMultiSelected={selectedFilenames.includes(item.filename)}
-                  onSelect={(e) => {
-                    if (dragHappenedRef.current) {
-                      dragHappenedRef.current = false
-                      return
-                    }
-                    if (e.ctrlKey || e.metaKey) {
-                      if (selectedFilename && selectedFilenames.length === 0 && item.filename !== selectedFilename) {
-                        toggleSelection(selectedFilename)
-                      }
-                      toggleSelection(item.filename)
-                    } else if (selectedFilenames.includes(item.filename)) {
-                      toggleSelection(item.filename)
-                    } else if (item.filename === selectedFilename) {
-                      setSelected(null)
-                    } else {
-                      setSelected(item.filename)
-                    }
-                  }}
-                />
-              )
-            })}
-          </div>
-        ))}
-      </div>
-
-      {selectionRect && (
-        <div
-          className="fixed z-10 pointer-events-none"
-          style={{
-            left: selectionRect.left,
-            top: selectionRect.top,
-            width: selectionRect.width,
-            height: selectionRect.height,
-            backgroundColor: 'rgba(34, 211, 238, 0.08)',
-            border: '1px solid rgba(34, 211, 238, 0.5)',
-          }}
-        />
+      {filteredItems.length === 0 && (
+        <div className="flex flex-col items-center justify-center h-full text-center gap-3">
+          {total === 0 ? (
+            <>
+              <FolderUp size={48} className="text-coal-600" aria-hidden="true" />
+              <p className="font-display text-xl text-paper-muted">No frames loaded</p>
+              <p className="font-mono text-sm text-paper-faint max-w-xs">Click <kbd className="border border-coal-600 px-1.5 rounded text-paper-muted">Open folder</kbd> in the toolbar to load a dataset</p>
+            </>
+          ) : (
+            <>
+              <Search size={48} className="text-coal-600" aria-hidden="true" />
+              <p className="font-display text-xl text-paper-muted">No matching frames</p>
+              <p className="font-mono text-sm text-paper-faint">Try adjusting the filter or search query</p>
+            </>
+          )}
+        </div>
       )}
+      {filteredItems.length > 0 && (<>
+        <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+          {virtualizer.getVirtualItems().map((virtualRow) => (
+            <div
+              key={virtualRow.key}
+              className="grid gap-3"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: virtualRow.size,
+                transform: `translateY(${virtualRow.start}px)`,
+                gridTemplateColumns: `repeat(${cols}, 1fr)`,
+              }}
+            >
+              {Array.from({ length: cols }).map((_, col) => {
+                const idx = virtualRow.index * cols + col
+                const item = filteredItems[idx]
+                if (!item) return <div key={col} />
+                return (
+                  <ImageCard
+                    key={item.filename}
+                    item={item}
+                    index={idx}
+                    isSelected={item.filename === selectedFilename}
+                    isMultiSelected={selectedFilenames.includes(item.filename)}
+                    onSelect={(e) => {
+                      if (dragHappenedRef.current) {
+                        dragHappenedRef.current = false
+                        return
+                      }
+                      if (e.ctrlKey || e.metaKey) {
+                        if (selectedFilename && selectedFilenames.length === 0 && item.filename !== selectedFilename) {
+                          toggleSelection(selectedFilename)
+                        }
+                        toggleSelection(item.filename)
+                      } else if (selectedFilenames.includes(item.filename)) {
+                        toggleSelection(item.filename)
+                      } else if (item.filename === selectedFilename) {
+                        setSelected(null)
+                      } else {
+                        setSelected(item.filename)
+                      }
+                    }}
+                  />
+                )
+              })}
+            </div>
+          ))}
+        </div>
+        {selectionRect && (
+          <div
+            className="fixed z-10 pointer-events-none"
+            style={{
+              left: selectionRect.left,
+              top: selectionRect.top,
+              width: selectionRect.width,
+              height: selectionRect.height,
+              backgroundColor: 'rgba(34, 211, 238, 0.08)',
+              border: '1px solid rgba(34, 211, 238, 0.5)',
+            }}
+          />
+        )}
+      </>)}
     </div>
   )
 }

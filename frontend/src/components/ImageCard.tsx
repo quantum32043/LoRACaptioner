@@ -10,9 +10,11 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
     ? 'border-cyano ring-1 ring-cyano/50'
     : isSelected
       ? 'border-safe ring-1 ring-safe/50 translate-y-[-2px]'
-      : 'border-coal-700 hover:border-coal-500'
-
-  const showTrigger = tr && tr.status !== 'exact'
+      : tr?.status === 'missing'
+        ? 'border-ember'
+        : tr && tr.status !== 'exact'
+          ? 'border-safe'
+          : 'border-coal-700 hover:border-coal-500'
 
   return (
     <button
@@ -28,22 +30,10 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
       <div className="h-6 bg-coal-800 flex items-center px-2 border-b border-coal-700">
         <span className="font-mono text-xs uppercase tracking-wider text-paper-faint group-hover:text-safe transition-colors">FR·{num}</span>
       </div>
-      <div className={`aspect-[4/3] bg-coal-800 overflow-hidden relative ${
-        showTrigger
-          ? tr.status === 'missing'
-            ? 'outline outline-[3px] outline-ember outline-offset-[-3px]'
-            : 'outline outline-[3px] outline-safe outline-offset-[-3px]'
-          : ''
-      }`}>
+      <div className="aspect-[4/3] bg-coal-800 overflow-hidden">
         <img src={item.thumb_url} alt={item.filename} loading="lazy" draggable={false} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
       </div>
-      <div className={`p-2 border-t transition-colors ${
-        !tr || tr.status === 'exact'
-          ? 'bg-coal-900 border-coal-700'
-          : tr.status === 'missing'
-            ? 'bg-ember/10 border-ember/30'
-            : 'bg-safe/10 border-safe/30'
-      }`}>
+      <div className="p-2 bg-coal-900 border-t border-coal-700">
         <div className="flex items-center gap-1.5 mb-1.5">
           <span className={`w-2 h-2 rounded-full ${item.tagged ? 'bg-cyano shadow-[0_0_4px_#5fc6d0]' : 'bg-safe animate-pulse shadow-[0_0_6px_#f5a02c]'}`} />
           <span className="font-mono text-xs text-paper-faint truncate">{item.filename}</span>

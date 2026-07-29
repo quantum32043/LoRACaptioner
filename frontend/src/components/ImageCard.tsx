@@ -11,6 +11,13 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
     : isSelected
       ? 'border-safe ring-1 ring-safe/50 translate-y-[-2px]'
       : 'border-coal-700 hover:border-coal-500'
+
+  const triggerRing = !tr || tr.status === 'exact'
+    ? ''
+    : tr.status === 'missing'
+      ? 'ring-2 ring-inset ring-ember/80'
+      : 'ring-2 ring-inset ring-safe/80'
+
   return (
     <button
       onClick={onSelect}
@@ -22,25 +29,29 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
           <span className="text-coal-950 text-xs font-bold leading-none">&#10003;</span>
         </div>
       )}
-      {tr && tr.status !== 'exact' && (
-        <div className={`absolute top-1 right-1 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-mono uppercase tracking-wider shadow ${
-          tr.status === 'missing'
-            ? 'bg-ember/70 text-white'
-            : 'bg-safe/70 text-coal-950'
-        }`}>
-          <span>{tr.status === 'missing' ? 'нет' : 'ошибка'}</span>
-        </div>
-      )}
       <div className="h-6 bg-coal-800 flex items-center px-2 border-b border-coal-700">
         <span className="font-mono text-xs uppercase tracking-wider text-paper-faint group-hover:text-safe transition-colors">FR·{num}</span>
       </div>
-      <div className="aspect-[4/3] bg-coal-800 overflow-hidden">
+      <div className={`aspect-[4/3] bg-coal-800 overflow-hidden ${triggerRing}`}>
         <img src={item.thumb_url} alt={item.filename} loading="lazy" draggable={false} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
       </div>
-      <div className="p-2 bg-coal-900 border-t border-coal-700">
+      <div className={`p-2 border-t transition-colors ${
+        !tr || tr.status === 'exact'
+          ? 'bg-coal-900 border-coal-700'
+          : tr.status === 'missing'
+            ? 'bg-ember/10 border-ember/30'
+            : 'bg-safe/10 border-safe/30'
+      }`}>
         <div className="flex items-center gap-1.5 mb-1.5">
           <span className={`w-2 h-2 rounded-full ${item.tagged ? 'bg-cyano shadow-[0_0_4px_#5fc6d0]' : 'bg-safe animate-pulse shadow-[0_0_6px_#f5a02c]'}`} />
           <span className="font-mono text-xs text-paper-faint truncate">{item.filename}</span>
+          {tr && tr.status !== 'exact' && (
+            <span className={`ml-auto font-mono text-[11px] uppercase tracking-wider ${
+              tr.status === 'missing' ? 'text-ember' : 'text-safe'
+            }`}>
+              {tr.status === 'missing' ? 'нет триггера' : 'триггер'}
+            </span>
+          )}
         </div>
         <p className="font-mono text-xs text-paper-muted leading-snug line-clamp-2">
           {item.caption || <span className="text-safe/60 italic">без капшена</span>}

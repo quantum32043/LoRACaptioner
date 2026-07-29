@@ -1,9 +1,3 @@
-# **CRITICAL RULES - MUST FOLLOW**
-
-## **RESPONSES**
-
-- Keep responses concise and to the point - unless the user asks otherwise
-
 ## **PLANNING MODE**
 
 - Always ask clarifying questions

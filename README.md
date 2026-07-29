@@ -4,8 +4,6 @@ A local web tool for annotating image datasets used for training LoRA models (St
 
 ![LoRA Captioner screenshot](docs/assets/preview.png)
 
----
-
 ## Features
 
 ### Grid and Navigation
@@ -31,39 +29,6 @@ A local web tool for annotating image datasets used for training LoRA models (St
 - Temperature control (0.1–2.0).
 - Model auto-offload after 5 minutes of inactivity.
 - Batch processing: all empty or selected frames with progress via SSE.
-
-### Interface
-- Dark theme in "photo lab" style: film grain, warm safelight accent, light meter.
-- Full-screen layout with no page scroll.
-- Notifications (sonner) for operation results.
-
----
-
-## Screenshots
-
-> *Place for screenshots. Recommended frames:*
-
-| # | What to Show | Description |
-|---|--------------|-------------|
-| 1 | **Main Screen** | Full interface: TopBar with light meter, Toolbar with search/filters, card grid, EditorPanel with selected frame |
-| 2 | **Tag Mode Editor** | Tag chips with drag-and-drop, input field, Auto/Auto all buttons, detailed view with zoom |
-| 3 | **Drag Selection** | Multiple selected cards with blue outline and checkmarks, visible rectangle selection |
-| 4 | **Batch Panel** | Open batch operations panel with form (prepend/append/remove/regex) |
-| 5 | **Auto-Tagging** | Model selection menu, task mode, temperature slider, batch processing progress |
-| 6 | **Empty State** | Dataset with no images or nothing found by filter |
-
----
-
-## Tech Stack
-
-| Layer | Technologies |
-|-------|-------------|
-| Backend | Python 3.12 + FastAPI, aiofiles, Pillow |
-| ML | PyTorch + Transformers + Florence-2-large-PromptGen-v2.0 |
-| Frontend | React 18 + TypeScript + Vite 6 |
-| State / Network | Zustand + TanStack Query |
-| UI | Tailwind CSS + lucide-react + sonner + dnd-kit |
-| Virtualization | TanStack Virtual |
 
 ---
 
@@ -155,25 +120,6 @@ Environment variables with `CAPTIONER_` prefix:
 | `Ctrl/Cmd + S` | Save caption |
 | `Enter` | Add tag (in tag input field) |
 | `Backspace` | Remove last tag (when input is empty) |
-
----
-
-## API
-
-Swagger documentation: `http://localhost:8000/docs` (when the server is running).
-
-Main endpoints (`/api`):
-
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/dataset/items` | List frames |
-| GET | `/dataset/stats` | Statistics (total / captioned / empty) |
-| PUT | `/dataset/caption` | Save caption |
-| POST | `/dataset/batch` | Batch operation |
-| GET | `/images/thumb/{name}` | Thumbnail (WebP) |
-| GET | `/images/full/{name}` | Full image |
-| GET | `/auto-tag/status` | Model status |
-| POST | `/auto-tag/generate` | Generate caption |
 
 ---
 

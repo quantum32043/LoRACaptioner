@@ -1,3 +1,4 @@
+import { AlertCircle, AlertTriangle } from 'lucide-react'
 import { type Item } from '../api/client'
 import { useDatasetStore } from '../store/useDatasetStore'
 
@@ -22,6 +23,16 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
           <span className="text-coal-950 text-xs font-bold leading-none">&#10003;</span>
         </div>
       )}
+      {tr && tr.status !== 'exact' && (
+        <div className={`absolute top-2 left-2 z-10 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-mono border shadow-lg ${
+          tr.status === 'missing'
+            ? 'bg-ember/20 text-ember border-ember/50'
+            : 'bg-safe/20 text-safe border-safe/50'
+        }`}>
+          {tr.status === 'missing' ? <AlertCircle size={14} /> : <AlertTriangle size={14} />}
+          <span>{tr.status === 'missing' ? 'нет' : 'ошибка'}</span>
+        </div>
+      )}
       <div className="h-6 bg-coal-800 flex items-center px-2 border-b border-coal-700">
         <span className="font-mono text-xs uppercase tracking-wider text-paper-faint group-hover:text-safe transition-colors">FR·{num}</span>
       </div>
@@ -32,11 +43,6 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
         <div className="flex items-center gap-1.5 mb-1.5">
           <span className={`w-2 h-2 rounded-full ${item.tagged ? 'bg-cyano shadow-[0_0_4px_#5fc6d0]' : 'bg-safe animate-pulse shadow-[0_0_6px_#f5a02c]'}`} />
           <span className="font-mono text-xs text-paper-faint truncate">{item.filename}</span>
-          {tr && tr.status !== 'exact' && (
-            <span className={`text-xs ${tr.status === 'missing' ? 'text-ember' : 'text-safe'}`}>
-              {tr.status === 'missing' ? '✗' : '⚠'}
-            </span>
-          )}
         </div>
         <p className="font-mono text-xs text-paper-muted leading-snug line-clamp-2">
           {item.caption || <span className="text-safe/60 italic">без капшена</span>}

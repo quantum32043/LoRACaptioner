@@ -70,24 +70,15 @@ export interface AutoTagBatchDone {
   total: number
 }
 
-export interface TriggerCheckResult {
-  filename: string
-  status: 'exact' | 'case' | 'separator' | 'position' | 'missing'
-  found_position: number | null
-  expected_position: number
-  variant: string | null
-}
-
 export interface TriggerCheckStats {
   total: number
   exact: number
-  warnings: { type: 'case' | 'separator' | 'position'; count: number; examples: string[] }[]
+  warnings: { type: 'case' | 'separator'; count: number; examples: string[] }[]
   missing: number
 }
 
 export interface TriggerAddRequest {
   trigger_words: string[]
-  position: 'prepend' | 'append'
   filenames?: string[] | null
   only_untagged: boolean
 }

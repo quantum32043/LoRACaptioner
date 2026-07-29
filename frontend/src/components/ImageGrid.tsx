@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useDatasetStore } from '../store/useDatasetStore'
 import ImageCard from './ImageCard'
@@ -9,6 +9,9 @@ export default function ImageGrid() {
   const selectedFilename = useDatasetStore((s) => s.selectedFilename)
   const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
   const toggleSelection = useDatasetStore((s) => s.toggleSelection)
+  const triggerFilter = useDatasetStore((s) => s.triggerFilter)
+  const triggerResults = useDatasetStore((s) => s.triggerResults)
+  const triggerWords = useDatasetStore((s) => s.triggerWords)
   const parentRef = useRef<HTMLDivElement>(null)
   const dragHappenedRef = useRef(false)
 
@@ -17,8 +20,20 @@ export default function ImageGrid() {
   const isDraggingRef = useRef(false)
   const [selectionRect, setSelectionRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null)
 
+  const filteredItems = useMemo(() => {
+    if (triggerWords.length === 0 || triggerFilter === 'all') return items
+    return items.filter((item) => {
+      const r = triggerResults[item.filename]
+      if (!r) return triggerFilter === 'missing'
+      if (triggerFilter === 'has_trigger') return r.status === 'exact'
+      if (triggerFilter === 'missing') return r.status === 'missing'
+      if (triggerFilter === 'warning') return r.status === 'case' || r.status === 'separator'
+      return true
+    })
+  }, [items, triggerFilter, triggerResults, triggerWords])
+
   const cols = Math.max(1, Math.floor((parentRef.current?.clientWidth ?? 800) / 220))
-  const rows = Math.ceil(items.length / cols)
+  const rows = Math.ceil(filteredItems.length / cols)
   const padding = 16
   const gap = 12
   const rowHeight = 260
@@ -95,11 +110,11 @@ export default function ImageGrid() {
 
           const store = useDatasetStore.getState()
           const toSelect: string[] = []
-          for (let i = 0; i < store.items.length; i++) {
+          for (let i = 0; i < filteredItems.length; i++) {
             const r = getCardRect(i)
             if (!r) continue
             if (r.left < selRight && r.right > selLeft && r.top < selBottom && r.bottom > selTop) {
-              toSelect.push(store.items[i].filename)
+              toSelect.push(filteredItems[i].filename)
             }
           }
 
@@ -150,7 +165,7 @@ export default function ImageGrid() {
           >
             {Array.from({ length: cols }).map((_, col) => {
               const idx = virtualRow.index * cols + col
-              const item = items[idx]
+              const item = filteredItems[idx]
               if (!item) return <div key={col} />
               return (
                 <ImageCard

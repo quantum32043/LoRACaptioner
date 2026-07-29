@@ -11,6 +11,8 @@ export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBa
   const setFilterUntagged = useDatasetStore((s) => s.setFilterUntagged)
   const clearSelection = useDatasetStore((s) => s.clearSelection)
   const setPanelOpen = useDatasetStore((s) => s.setPanelOpen)
+  const triggerFilter = useDatasetStore((s) => s.triggerFilter)
+  const setTriggerFilter = useDatasetStore((s) => s.setTriggerFilter)
 
   const hasSelection = selectedFilenames.length > 0 || selectedFilename !== null
   const selectionCount = selectedFilenames.length || (selectedFilename ? 1 : 0)
@@ -55,6 +57,17 @@ export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBa
         <Target size={14} />
         <span className="hidden sm:inline">Trigger</span>
       </button>
+
+      <select
+        value={triggerFilter}
+        onChange={(e) => setTriggerFilter(e.target.value as any)}
+        className="bg-coal-800 text-paper text-xs font-mono border border-coal-600 rounded-md px-2 py-1.5 shrink-0"
+      >
+        <option value="all">Все</option>
+        <option value="has_trigger">С триггером</option>
+        <option value="missing">Без триггера</option>
+        <option value="warning">С варнингами</option>
+      </select>
 
       <AutoTagPanel />
 

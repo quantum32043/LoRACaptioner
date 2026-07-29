@@ -6,7 +6,7 @@ import { useDatasetStore } from './store/useDatasetStore'
 import TopBar from './components/TopBar'
 import Toolbar from './components/Toolbar'
 import BatchPanel from './components/BatchPanel'
-import TriggerPanel from './components/TriggerPanel'
+import TriggerPanel, { checkTriggerWords } from './components/TriggerPanel'
 import ImageGrid from './components/ImageGrid'
 import EditorPanel from './components/EditorPanel'
 import StatusStrip from './components/StatusStrip'
@@ -38,6 +38,22 @@ function App() {
     },
     refetchInterval: 30000,
   })
+
+  const items = useDatasetStore((s) => s.items)
+  const triggerWords = useDatasetStore((s) => s.triggerWords)
+  const setTriggerCheckStats = useDatasetStore((s) => s.setTriggerCheckStats)
+  const setTriggerResults = useDatasetStore((s) => s.setTriggerResults)
+
+  useEffect(() => {
+    if (triggerWords.length === 0) {
+      setTriggerCheckStats(null)
+      setTriggerResults({})
+      return
+    }
+    const { stats, results } = checkTriggerWords(items, triggerWords)
+    setTriggerCheckStats(stats)
+    setTriggerResults(results)
+  }, [items, triggerWords])
 
   useQuery({
     queryKey: ['auto-tag-modes'],

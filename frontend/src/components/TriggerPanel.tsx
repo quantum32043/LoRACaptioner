@@ -1,50 +1,34 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Target, CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react'
-import { api, type TriggerCheckStats, type TriggerCheckResult } from '../api/client'
+import { Target, Plus, CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react'
+import { api, type TriggerCheckStats } from '../api/client'
 import { useDatasetStore } from '../store/useDatasetStore'
 
 function normalize(s: string) {
   return s.toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-function checkTriggerWords(items: { caption: string }[], triggerWords: string[], expectedPos: number): TriggerCheckStats {
-  const warnBuckets: Record<string, { count: number; examples: Set<string> }> = { case: { count: 0, examples: new Set() }, separator: { count: 0, examples: new Set() }, position: { count: 0, examples: new Set() } }
+export function checkTriggerWords(items: { filename: string; caption: string }[], triggerWords: string[]): { stats: TriggerCheckStats; results: Record<string, { status: string; variant: string | null }> } {
+  const warnBuckets: Record<string, { count: number; examples: Set<string> }> = { case: { count: 0, examples: new Set() }, separator: { count: 0, examples: new Set() } }
   let exact = 0
   let missing = 0
+  const results: Record<string, { status: string; variant: string | null }> = {}
 
   for (const item of items) {
     const tags = item.caption.split(',').map((t) => t.trim()).filter(Boolean)
-    const tagAtPos = tags[expectedPos]
-    let status: TriggerCheckResult['status'] = 'missing'
+    let status = 'missing'
     let variant: string | null = null
 
-    if (tagAtPos) {
+    for (const tag of tags) {
       for (const tw of triggerWords) {
         const tws = tw.trim()
         if (!tws) continue
-        if (tagAtPos === tws) { status = 'exact'; break }
-        if (tagAtPos.toLowerCase() === tws.toLowerCase()) { status = 'case'; variant = tagAtPos; break }
-        if (normalize(tagAtPos) === normalize(tws)) { status = 'separator'; variant = tagAtPos; break }
+        if (tag === tws) { status = 'exact'; break }
+        if (tag.toLowerCase() === tws.toLowerCase()) { status = 'case'; variant = tag; break }
+        if (normalize(tag) === normalize(tws)) { status = 'separator'; variant = tag; break }
       }
-    }
-
-    if (status === 'missing' || status === 'exact') {
-      // already determined
-    }
-
-    if (status === 'missing') {
-      for (const tw of triggerWords) {
-        const tws = tw.trim()
-        if (!tws) continue
-        const idx = tags.findIndex((t, i) => i !== expectedPos && t.toLowerCase() === tws.toLowerCase())
-        if (idx !== -1) {
-          status = 'position'
-          variant = tags[idx] !== tws ? tags[idx] : null
-          break
-        }
-      }
+      if (status === 'exact') break
     }
 
     if (status === 'exact') exact++
@@ -54,36 +38,32 @@ function checkTriggerWords(items: { caption: string }[], triggerWords: string[],
       bucket.count++
       if (variant) bucket.examples.add(variant)
     }
+    results[item.filename] = { status, variant }
   }
 
   const warnings: TriggerCheckStats['warnings'] = []
-  for (const type of ['case', 'separator', 'position'] as const) {
+  for (const type of ['case', 'separator'] as const) {
     if (warnBuckets[type].count > 0) {
       warnings.push({ type, count: warnBuckets[type].count, examples: Array.from(warnBuckets[type].examples).slice(0, 5) })
     }
   }
 
-  return { total: items.length, exact, warnings, missing }
+  return { stats: { total: items.length, exact, warnings, missing }, results }
 }
 
 export default function TriggerPanel() {
   const items = useDatasetStore((s) => s.items)
   const triggerWords = useDatasetStore((s) => s.triggerWords)
-  const triggerPosition = useDatasetStore((s) => s.triggerPosition)
   const triggerCheckStats = useDatasetStore((s) => s.triggerCheckStats)
   const setTriggerWords = useDatasetStore((s) => s.setTriggerWords)
-  const setTriggerPosition = useDatasetStore((s) => s.setTriggerPosition)
   const setTriggerCheckStats = useDatasetStore((s) => s.setTriggerCheckStats)
 
   const [inputValue, setInputValue] = useState('')
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
   const [editValue, setEditValue] = useState('')
-  const [addPosition, setAddPosition] = useState<'prepend' | 'append'>('prepend')
   const [onlyMissing, setOnlyMissing] = useState(false)
   const [onlyUntagged, setOnlyUntagged] = useState(false)
   const queryClient = useQueryClient()
-
-  const posLabels = ['первый', 'второй', 'третий', 'четвёртый', 'пятый']
 
   const handleAddTrigger = () => {
     const val = inputValue.trim()
@@ -111,54 +91,39 @@ export default function TriggerPanel() {
     setEditingIdx(null)
   }
 
-  const handleCheck = () => {
+  const handleAdd = () => {
     if (triggerWords.length === 0) return
-    const result = checkTriggerWords(items, triggerWords, triggerPosition)
-    setTriggerCheckStats(result)
+    let filenames: string[] | undefined
+    if (onlyMissing && triggerCheckStats) {
+      const missingFns = items.filter((item) => {
+        const tags = item.caption.split(',').map((t) => t.trim()).filter(Boolean)
+        for (const tw of triggerWords) {
+          const tws = tw.trim()
+          if (!tws) continue
+          for (const tag of tags) {
+            if (tag === tws) return false
+            if (tag.toLowerCase() === tws.toLowerCase()) return false
+            if (normalize(tag) === normalize(tws)) return false
+          }
+        }
+        return true
+      }).map((i) => i.filename)
+      if (missingFns.length === 0) { toast.info('Все файлы уже содержат триггер'); return }
+      filenames = missingFns
+    }
+    runAdd({ trigger_words: triggerWords, filenames: filenames || null, only_untagged: onlyUntagged })
   }
 
   const { mutate: runAdd, isPending } = useMutation({
-    mutationFn: () => {
-      let filenames: string[] | undefined
-      if (onlyMissing && triggerCheckStats) {
-        const missingFns = items.filter((item) => {
-          const tags = item.caption.split(',').map((t) => t.trim()).filter(Boolean)
-          const tagAtPos = tags[triggerPosition]
-          let has = false
-          for (const tw of triggerWords) {
-            const tws = tw.trim()
-            if (!tws) continue
-            if (tagAtPos === tws) { has = true; break }
-            if (tagAtPos?.toLowerCase() === tws.toLowerCase()) { has = true; break }
-            if (normalize(tagAtPos || '') === normalize(tws)) { has = true; break }
-          }
-          if (!has) {
-            for (const tw of triggerWords) {
-              const tws = tw.trim()
-              if (!tws) continue
-              if (tags.some((t, i) => i !== triggerPosition && t.toLowerCase() === tws.toLowerCase())) { has = true; break }
-            }
-          }
-          return !has
-        }).map((i) => i.filename)
-        if (missingFns.length === 0) throw new Error('no_missing')
-        filenames = missingFns
-      }
-      return api.triggerAdd({ trigger_words: triggerWords, position: addPosition, filenames: filenames || null, only_untagged: onlyUntagged })
-    },
+    mutationFn: (body: { trigger_words: string[]; filenames: string[] | null; only_untagged: boolean }) =>
+      api.triggerAdd({ trigger_words: body.trigger_words, filenames: body.filenames, only_untagged: body.only_untagged }),
     onSuccess: (data) => {
       toast.success(`Триггер добавлен в ${data.changed} из ${data.total} файлов`)
       setTriggerCheckStats(null)
       queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['stats'] })
     },
-    onError: (err) => {
-      if (err instanceof Error && err.message === 'no_missing') {
-        toast.info('Все файлы уже содержат триггер')
-      } else {
-        toast.error('Ошибка при добавлении триггера')
-      }
-    },
+    onError: () => toast.error('Ошибка при добавлении триггера'),
   })
 
   return (
@@ -168,7 +133,7 @@ export default function TriggerPanel() {
         <span className="font-mono text-xs text-paper uppercase tracking-wider">Trigger words</span>
       </div>
 
-      <div className="flex items-center gap-2 mb-2 flex-wrap">
+      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         {triggerWords.map((word, i) =>
           editingIdx === i ? (
             <input
@@ -190,37 +155,23 @@ export default function TriggerPanel() {
             </span>
           )
         )}
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTrigger() } }}
-          placeholder="добавить триггер..."
-          className="bg-transparent text-sm text-paper placeholder-paper-faint outline-none font-mono flex-1 min-w-24"
-        />
-      </div>
-
-      <div className="flex items-center gap-3 flex-wrap mb-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-mono text-paper-muted">Позиция:</span>
-          <select
-            value={triggerPosition}
-            onChange={(e) => setTriggerPosition(Number(e.target.value))}
-            className="bg-coal-800 text-paper text-xs font-mono border border-coal-600 rounded-md px-2 py-1"
+        <div className="flex items-center gap-1">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTrigger() } }}
+            placeholder="триггер..."
+            className="bg-transparent text-sm text-paper placeholder-paper-faint outline-none font-mono w-24"
+          />
+          <button
+            onClick={handleAddTrigger}
+            disabled={!inputValue.trim()}
+            className="p-1 text-cyano hover:text-cyano/80 disabled:text-paper-faint/30"
           >
-            {Array.from({ length: 10 }, (_, i) => (
-              <option key={i} value={i}>{posLabels[i] || `${i + 1}-й`} ({i})</option>
-            ))}
-          </select>
+            <Plus size={16} />
+          </button>
         </div>
-
-        <button
-          onClick={handleCheck}
-          disabled={triggerWords.length === 0}
-          className="px-3 py-1 text-xs font-mono uppercase tracking-wider bg-cyano/20 text-cyano border border-cyano/50 rounded-md hover:bg-cyano/30 disabled:opacity-50"
-        >
-          Проверить
-        </button>
       </div>
 
       {triggerCheckStats && (
@@ -238,7 +189,7 @@ export default function TriggerPanel() {
             <div key={w.type} className="flex items-center gap-1.5 text-xs font-mono text-safe">
               <AlertTriangle size={12} />
               <span>
-                {w.type === 'case' ? 'Другой регистр' : w.type === 'separator' ? 'Разделитель' : 'Позиция'}
+                {w.type === 'case' ? 'Другой регистр' : 'Разделитель'}
                 : {w.count} файлов
               </span>
               {w.examples.length > 0 && (
@@ -257,15 +208,6 @@ export default function TriggerPanel() {
       )}
 
       <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-coal-700/50">
-        <select
-          value={addPosition}
-          onChange={(e) => setAddPosition(e.target.value as 'prepend' | 'append')}
-          className="bg-coal-800 text-paper text-xs font-mono border border-coal-600 rounded-md px-2 py-1"
-        >
-          <option value="prepend">В начало</option>
-          <option value="append">В конец</option>
-        </select>
-
         <label className="flex items-center gap-1.5 text-xs font-mono text-paper-muted cursor-pointer">
           <input type="checkbox" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} className="accent-safe" />
           только без триггера
@@ -277,11 +219,11 @@ export default function TriggerPanel() {
         </label>
 
         <button
-          onClick={() => runAdd()}
+          onClick={handleAdd}
           disabled={triggerWords.length === 0 || isPending}
           className="px-4 py-1.5 text-xs font-mono uppercase tracking-wider bg-safe text-coal-950 rounded-md font-semibold disabled:opacity-50"
         >
-          {isPending ? '...' : 'Добавить'}
+          {isPending ? '...' : 'Добавить триггер'}
         </button>
       </div>
     </div>

@@ -64,13 +64,15 @@ interface DatasetState {
   setGpuFallbackConfirmed: (v: boolean) => void
 
   triggerWords: string[]
-  triggerPosition: number
   triggerCheckStats: TriggerCheckStats | null
   triggerPanelOpen: boolean
+  triggerResults: Record<string, { status: string; variant: string | null }>
+  triggerFilter: 'all' | 'has_trigger' | 'missing' | 'warning'
   setTriggerWords: (words: string[]) => void
-  setTriggerPosition: (pos: number) => void
   setTriggerCheckStats: (stats: TriggerCheckStats | null) => void
   setTriggerPanelOpen: (open: boolean) => void
+  setTriggerResults: (results: Record<string, { status: string; variant: string | null }>) => void
+  setTriggerFilter: (filter: 'all' | 'has_trigger' | 'missing' | 'warning') => void
 }
 
 export const useDatasetStore = create<DatasetState>((set) => ({
@@ -138,11 +140,13 @@ export const useDatasetStore = create<DatasetState>((set) => ({
   setGpuFallbackConfirmed: (v) => set({ gpuFallbackConfirmed: v }),
 
   triggerWords: [],
-  triggerPosition: 0,
   triggerCheckStats: null,
   triggerPanelOpen: false,
-  setTriggerWords: (words) => set({ triggerWords: words, triggerCheckStats: null }),
-  setTriggerPosition: (pos) => set({ triggerPosition: pos, triggerCheckStats: null }),
+  triggerResults: {},
+  triggerFilter: 'all',
+  setTriggerWords: (words) => set({ triggerWords: words }),
   setTriggerCheckStats: (stats) => set({ triggerCheckStats: stats }),
   setTriggerPanelOpen: (open) => set({ triggerPanelOpen: open }),
+  setTriggerResults: (results) => set({ triggerResults: results }),
+  setTriggerFilter: (filter) => set({ triggerFilter: filter }),
 }))

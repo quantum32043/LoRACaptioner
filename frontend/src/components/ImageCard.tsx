@@ -1,6 +1,10 @@
 import { type Item } from '../api/client'
+import { useDatasetStore } from '../store/useDatasetStore'
 
 export default function ImageCard({ item, index, isSelected, isMultiSelected, onSelect }: { item: Item; index: number; isSelected: boolean; isMultiSelected: boolean; onSelect: (e: React.MouseEvent) => void }) {
+  const triggerResults = useDatasetStore((s) => s.triggerResults)
+  const triggerWords = useDatasetStore((s) => s.triggerWords)
+  const tr = triggerWords.length > 0 ? triggerResults[item.filename] : undefined
   const num = item.filename.match(/\d+/)?.[0].padStart(4, '0') || '0000'
   const borderClass = isMultiSelected
     ? 'border-cyano ring-1 ring-cyano/50'
@@ -28,6 +32,11 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
         <div className="flex items-center gap-1.5 mb-1.5">
           <span className={`w-2 h-2 rounded-full ${item.tagged ? 'bg-cyano shadow-[0_0_4px_#5fc6d0]' : 'bg-safe animate-pulse shadow-[0_0_6px_#f5a02c]'}`} />
           <span className="font-mono text-xs text-paper-faint truncate">{item.filename}</span>
+          {tr && tr.status !== 'exact' && (
+            <span className={`text-xs ${tr.status === 'missing' ? 'text-ember' : 'text-safe'}`}>
+              {tr.status === 'missing' ? '✗' : '⚠'}
+            </span>
+          )}
         </div>
         <p className="font-mono text-xs text-paper-muted leading-snug line-clamp-2">
           {item.caption || <span className="text-safe/60 italic">без капшена</span>}

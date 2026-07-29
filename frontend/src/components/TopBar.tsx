@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { RotateCw, FolderUp } from 'lucide-react'
+import { RotateCw, FolderUp, AlertTriangle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '../api/client'
 import { useDatasetStore } from '../store/useDatasetStore'
@@ -23,6 +23,9 @@ export default function TopBar() {
   const tagged = stats?.tagged ?? 0
   const untagged = stats?.untagged ?? 0
   const pct = total > 0 ? Math.floor((tagged / total) * 100) : 0
+  const triggerCheckStats = useDatasetStore((s) => s.triggerCheckStats)
+  const triggerWords = useDatasetStore((s) => s.triggerWords)
+  const problemCount = triggerCheckStats ? triggerCheckStats.warnings.reduce((a, w) => a + w.count, 0) + triggerCheckStats.missing : 0
 
   const segments = 20
   const filled = Math.round((tagged / Math.max(total, 1)) * segments)
@@ -95,6 +98,13 @@ export default function TopBar() {
           ))}
           <span className="text-xs font-mono text-paper-muted ml-1 w-6 md:w-8 text-right">{pct}%</span>
         </div>
+
+        {triggerWords.length > 0 && triggerCheckStats && problemCount > 0 && (
+          <span className={`flex items-center gap-1 text-xs font-mono ${triggerCheckStats.missing > 0 ? 'text-ember' : 'text-safe'}`}>
+            {triggerCheckStats.missing > 0 ? <AlertCircle size={14} /> : <AlertTriangle size={14} />}
+            {problemCount}
+          </span>
+        )}
 
         <input ref={inputRef} type="file" {...{ webkitdirectory: '' }} multiple className="hidden" onChange={handleFolderPick} />
 

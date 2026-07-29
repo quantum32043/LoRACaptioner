@@ -18,23 +18,23 @@ export default function GpuFallbackDialog({ onConfirm, onCancel }: { onConfirm: 
         className="bg-coal-900 border border-coal-700 rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="font-display text-lg text-paper mb-3">CUDA не обнаружена</h3>
+        <h3 className="font-display text-lg text-paper mb-3">CUDA not found</h3>
         <p className="font-mono text-sm text-paper-muted mb-6 leading-relaxed">
-          На вашей системе не найден GPU (CUDA). Авто-тегирование будет работать на CPU — это может быть значительно медленнее.
+          No GPU (CUDA) found on your system. Auto-tagging will use the CPU — this may be significantly slower.
         </p>
         <div className="flex items-center justify-end gap-3">
           <button
             onClick={onCancel}
             className="px-4 py-2 text-xs font-mono text-paper-muted border border-coal-600 rounded-md hover:text-paper"
           >
-            Отмена
+            Cancel
           </button>
           <button
             ref={confirmRef}
             onClick={onConfirm}
             className="px-4 py-2 text-xs font-mono bg-cyano text-coal-950 rounded-md font-semibold hover:bg-cyano/90"
           >
-            Использовать CPU
+            Use CPU
           </button>
         </div>
       </div>

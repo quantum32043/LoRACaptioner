@@ -46,7 +46,7 @@ export default function AutoTagPanel() {
       const status = await api.getAutoTagStatus()
       const newState = status.state
       if (prevAutoTagState.current === 'ready' && newState === 'unloaded' && !manualUnloadRef.current) {
-        toast.info('Модель выгружена из-за отсутствия активности')
+        toast.info('Model unloaded due to inactivity')
       }
       prevAutoTagState.current = newState
       setAutoTagStatus(status)
@@ -71,7 +71,7 @@ export default function AutoTagPanel() {
       useDatasetStore.getState().setAutoTagTaskMode(mode)
     },
     onError: () => {
-      toast.error('Ошибка при смене режима')
+      toast.error('Error changing mode')
     },
   })
 
@@ -81,18 +81,18 @@ export default function AutoTagPanel() {
       useDatasetStore.getState().setAutoTagTemperature(temp)
     },
     onError: () => {
-      toast.error('Ошибка при смене температуры')
+      toast.error('Error changing temperature')
     },
   })
 
   const stateLabel: Record<string, string> = {
-    unavailable: 'Недоступна',
-    not_downloaded: 'Не скачана',
-    downloading: 'Скачивание...',
-    loading: 'Загрузка...',
-    ready: 'Готова',
-    unloaded: 'Не загружена',
-    error: 'Ошибка',
+    unavailable: 'Unavailable',
+    not_downloaded: 'Not downloaded',
+    downloading: 'Downloading...',
+    loading: 'Loading...',
+    ready: 'Ready',
+    unloaded: 'Not loaded',
+    error: 'Error',
   }
 
   const stateColor: Record<string, string> = {
@@ -114,18 +114,18 @@ export default function AutoTagPanel() {
         } else if (msg.event === 'complete') {
           setDownloadProgress(null)
           queryClient.invalidateQueries({ queryKey: ['auto-tag-status'] })
-          toast.success('Модель скачана')
+          toast.success('Model downloaded')
         } else if (msg.event === 'error') {
           const err = JSON.parse(msg.data)
           setDownloadProgress(null)
-          toast.error(`Ошибка скачивания: ${err.error}`)
+          toast.error(`Download error: ${err.error}`)
           queryClient.invalidateQueries({ queryKey: ['auto-tag-status'] })
         }
       }
     } catch (e) {
       setDownloadProgress(null)
       queryClient.invalidateQueries({ queryKey: ['auto-tag-status'] })
-      toast.error(`Ошибка подключения: ${e instanceof Error ? e.message : 'Неизвестная ошибка'}`)
+      toast.error(`Connection error: ${e instanceof Error ? e.message : 'Unknown error'}`)
     }
   }, [queryClient, setDownloadProgress])
 
@@ -148,15 +148,15 @@ export default function AutoTagPanel() {
           queryClient.invalidateQueries({ queryKey: ['stats'] })
           setBatchRunning(false)
           if (d.errors > 0 && d.count > 0) {
-            toast.warning(`Обработано ${d.count}, ошибок ${d.errors}`)
+            toast.warning(`Processed ${d.count}, errors ${d.errors}`)
           } else if (d.errors > 0) {
-            toast.error(`Все ${d.errors} файлов с ошибкой`)
+            toast.error(`All ${d.errors} files with errors`)
           } else {
-            toast.success(`Теги добавлены для ${d.count} файлов`)
+            toast.success(`Tags added for ${d.count} files`)
           }
         } else if (msg.event === 'error') {
           const err = JSON.parse(msg.data)
-          toast.error(`Ошибка: ${err.filename} — ${err.error}`)
+          toast.error(`Error: ${err.filename} — ${err.error}`)
         }
       }
     } catch (e) {
@@ -187,15 +187,15 @@ export default function AutoTagPanel() {
           queryClient.invalidateQueries({ queryKey: ['stats'] })
           setBatchRunning(false)
           if (d.errors > 0 && d.count > 0) {
-            toast.warning(`Обработано ${d.count}, ошибок ${d.errors}`)
+            toast.warning(`Processed ${d.count}, errors ${d.errors}`)
           } else if (d.errors > 0) {
-            toast.error(`Все ${d.errors} файлов с ошибкой`)
+            toast.error(`All ${d.errors} files with errors`)
           } else {
-            toast.success(`Теги добавлены для ${d.count} файлов`)
+            toast.success(`Tags added for ${d.count} files`)
           }
         } else if (msg.event === 'error') {
           const err = JSON.parse(msg.data)
-          toast.error(`Ошибка: ${err.filename} — ${err.error}`)
+          toast.error(`Error: ${err.filename} — ${err.error}`)
         }
       }
     } catch (e) {
@@ -219,7 +219,7 @@ export default function AutoTagPanel() {
     const single = useDatasetStore.getState().selectedFilename
     const effective = filenames.length > 0 ? filenames : (single ? [single] : [])
     if (effective.length === 0) {
-      toast.error('Не выбрано ни одного кадра')
+      toast.error('No frames selected')
       return
     }
     if (!autoTagGpuAvailable && !gpuFallbackConfirmed) {
@@ -266,14 +266,14 @@ export default function AutoTagPanel() {
             <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />
             <div className="absolute right-0 top-full mt-1 z-40 w-72 bg-coal-900 border border-coal-700 rounded-xl shadow-2xl p-4">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-mono text-xs text-paper-muted">Авто-тегирование</span>
+                <span className="font-mono text-xs text-paper-muted">Auto-tagging</span>
                 <span className={`font-mono text-xs ${stateColor[autoTagState]}`}>
                   {stateLabel[autoTagState]}
                 </span>
               </div>
               {autoTagState === 'unloaded' && (
                 <p className="mb-3 text-xs font-mono text-paper-faint text-center">
-                  Модель загрузится автоматически при запуске
+                  Model will load automatically on start
                 </p>
               )}
 
@@ -291,7 +291,7 @@ export default function AutoTagPanel() {
 
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="font-mono text-xs text-paper-muted">Температура</label>
+                  <label className="font-mono text-xs text-paper-muted">Temperature</label>
                   <span className="font-mono text-xs text-paper-faint">{autoTagTemperature.toFixed(1)}</span>
                 </div>
                 <input
@@ -313,7 +313,7 @@ export default function AutoTagPanel() {
               {autoTagState === 'loading' && (
                 <div className="mb-3 flex items-center gap-2 text-xs font-mono text-cyano">
                   <RotateCw size={12} className="animate-spin" />
-                  <span>Загрузка модели...</span>
+                  <span>Loading model...</span>
                 </div>
               )}
 
@@ -350,7 +350,7 @@ export default function AutoTagPanel() {
                     className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono bg-cyano/20 text-cyano border border-cyano/40 rounded-md hover:bg-cyano/30"
                   >
                     <Download size={14} />
-                    {autoTagState === 'error' ? 'Повторить скачивание' : 'Скачать модель'}
+                    {autoTagState === 'error' ? 'Retry download' : 'Download model'}
                   </button>
                 )}
 
@@ -362,7 +362,7 @@ export default function AutoTagPanel() {
                       className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono bg-safe/20 text-safe border border-safe/40 rounded-md hover:bg-safe/30 disabled:opacity-50"
                     >
                       <Sparkles size={14} />
-                      Auto все пустые
+                      Auto untagged
                     </button>
                     <button
                       onClick={handleAutoSelected}
@@ -370,7 +370,7 @@ export default function AutoTagPanel() {
                       className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono bg-coal-800 text-paper-muted border border-coal-600 rounded-md hover:text-paper disabled:opacity-50"
                     >
                       <Sparkles size={14} />
-                      Auto выбранные ({effectiveSelection.length})
+                      Auto selected ({effectiveSelection.length})
                     </button>
                     {autoTagState === 'unloaded' ? (
                       <button
@@ -382,7 +382,7 @@ export default function AutoTagPanel() {
                         className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono bg-cyano/20 text-cyano border border-cyano/40 rounded-md hover:bg-cyano/30 disabled:opacity-50"
                       >
                         <Download size={14} />
-                        Загрузить модель
+                        Load model
                       </button>
                     ) : (
                       <button
@@ -390,13 +390,13 @@ export default function AutoTagPanel() {
                           manualUnloadRef.current = true
                           api.unloadModel()
                           queryClient.invalidateQueries({ queryKey: ['auto-tag-status'] })
-                          toast.success('Модель выгружена')
+                          toast.success('Model unloaded')
                           setTimeout(() => { manualUnloadRef.current = false }, 2000)
                         }}
                         className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-mono text-paper-faint border border-coal-600 rounded-md hover:text-ember hover:border-ember/40"
                       >
                         <Trash2 size={14} />
-                        Выгрузить модель
+                        Unload model
                       </button>
                     )}
                   </>
@@ -404,7 +404,7 @@ export default function AutoTagPanel() {
 
                 {autoTagState === 'error' && (
                   <div className="text-xs font-mono text-ember text-center">
-                    {useDatasetStore.getState().autoTagLastError || 'Неизвестная ошибка'}
+                    {useDatasetStore.getState().autoTagLastError || 'Unknown error'}
                   </div>
                 )}
               </div>

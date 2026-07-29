@@ -108,7 +108,7 @@ export default function TriggerPanel() {
         }
         return true
       }).map((i) => i.filename)
-      if (missingFns.length === 0) { toast.info('Все файлы уже содержат триггер'); return }
+      if (missingFns.length === 0) {         toast.info('All files already have the trigger'); return }
       filenames = missingFns
     }
     runAdd({ trigger_words: triggerWords, filenames: filenames || null, only_untagged: onlyUntagged })
@@ -118,12 +118,12 @@ export default function TriggerPanel() {
     mutationFn: (body: { trigger_words: string[]; filenames: string[] | null; only_untagged: boolean }) =>
       api.triggerAdd({ trigger_words: body.trigger_words, filenames: body.filenames, only_untagged: body.only_untagged }),
     onSuccess: (data) => {
-      toast.success(`Триггер добавлен в ${data.changed} из ${data.total} файлов`)
+      toast.success(`Trigger added to ${data.changed} of ${data.total} files`)
       setTriggerCheckStats(null)
       queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['stats'] })
     },
-    onError: () => toast.error('Ошибка при добавлении триггера'),
+    onError: () => toast.error('Error adding trigger'),
   })
 
   return (
@@ -161,7 +161,7 @@ export default function TriggerPanel() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTrigger() } }}
-            placeholder="триггер..."
+            placeholder="trigger word..."
             className="bg-transparent text-sm text-paper placeholder-paper-faint outline-none font-mono w-24"
           />
           <button
@@ -181,7 +181,7 @@ export default function TriggerPanel() {
             <span className="text-paper-faint">/</span>
             <span className="text-paper-muted">{triggerCheckStats.total}</span>
             {triggerCheckStats.exact === triggerCheckStats.total && (
-              <span className="text-cyano text-[10px] tracking-wider uppercase">— все ок</span>
+              <span className="text-cyano text-[10px] tracking-wider uppercase">— all good</span>
             )}
           </div>
 
@@ -189,8 +189,8 @@ export default function TriggerPanel() {
             <div key={w.type} className="flex items-center gap-1.5 text-xs font-mono text-safe">
               <AlertTriangle size={12} />
               <span>
-                {w.type === 'case' ? 'Другой регистр' : 'Разделитель'}
-                : {w.count} файлов
+                {w.type === 'case' ? 'Case mismatch' : 'Separator'}
+                : {w.count} files
               </span>
               {w.examples.length > 0 && (
                 <span className="text-paper-faint">({w.examples.join(', ')})</span>
@@ -201,7 +201,7 @@ export default function TriggerPanel() {
           {triggerCheckStats.missing > 0 && (
             <div className="flex items-center gap-1.5 text-xs font-mono text-ember">
               <AlertCircle size={12} />
-              <span>Отсутствует: {triggerCheckStats.missing} файлов</span>
+              <span>Missing: {triggerCheckStats.missing} files</span>
             </div>
           )}
         </div>
@@ -210,12 +210,12 @@ export default function TriggerPanel() {
       <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-coal-700/50">
         <label className="flex items-center gap-1.5 text-xs font-mono text-paper-muted cursor-pointer">
           <input type="checkbox" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} className="accent-safe" />
-          только без триггера
+          missing only
         </label>
 
         <label className="flex items-center gap-1.5 text-xs font-mono text-paper-muted cursor-pointer">
           <input type="checkbox" checked={onlyUntagged} onChange={(e) => setOnlyUntagged(e.target.checked)} className="accent-safe" />
-          только пустые
+          untagged only
         </label>
 
         <button
@@ -223,7 +223,7 @@ export default function TriggerPanel() {
           disabled={triggerWords.length === 0 || isPending}
           className="px-4 py-1.5 text-xs font-mono uppercase tracking-wider bg-safe text-coal-950 rounded-md font-semibold disabled:opacity-50"
         >
-          {isPending ? '...' : 'Добавить триггер'}
+          {isPending ? '...' : 'Add trigger'}
         </button>
       </div>
     </div>

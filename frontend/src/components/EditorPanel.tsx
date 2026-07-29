@@ -79,7 +79,7 @@ export default function EditorPanel() {
       queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['stats'] })
     },
-    onError: () => toast.error('Ошибка сохранения'),
+    onError: () => toast.error('Save error'),
   })
 
   const { mutate: batchSave, isPending: batchSaving } = useMutation({
@@ -108,9 +108,9 @@ export default function EditorPanel() {
       setRemovedTags([])
       queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['stats'] })
-      toast.success(`Сохранено для ${filenames.length} кадров`)
+      toast.success(`Saved for ${filenames.length} frames`)
     },
-    onError: () => toast.error('Ошибка массового сохранения'),
+    onError: () => toast.error('Batch save error'),
   })
 
   const { mutate: renameTag } = useMutation({
@@ -126,9 +126,9 @@ export default function EditorPanel() {
       setEditingTag(null)
       queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['stats'] })
-      toast.success('Тег переименован')
+      toast.success('Tag renamed')
     },
-    onError: () => toast.error('Ошибка переименования'),
+    onError: () => toast.error('Rename error'),
   })
 
   const handleSave = () => {
@@ -195,9 +195,9 @@ export default function EditorPanel() {
       updateItem(filename, data.caption)
       queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['stats'] })
-      toast.success('Теги сгенерированы')
+      toast.success('Tags generated')
     },
-    onError: () => toast.error('Ошибка генерации'),
+    onError: () => toast.error('Generation error'),
   })
 
   const handleAutoTag = () => {
@@ -234,19 +234,19 @@ export default function EditorPanel() {
           queryClient.invalidateQueries({ queryKey: ['items'] })
           queryClient.invalidateQueries({ queryKey: ['stats'] })
           if (d.errors > 0 && d.count > 0) {
-            toast.warning(`Обработано ${d.count}, ошибок ${d.errors}`)
+            toast.warning(`Processed ${d.count}, ${d.errors} errors`)
           } else if (d.errors > 0) {
-            toast.error(`Все ${d.errors} файлов с ошибкой`)
+            toast.error(`All ${d.errors} files had errors`)
           } else {
-            toast.success(`Теги добавлены для ${d.count} файлов`)
+            toast.success(`Tags added for ${d.count} files`)
           }
         } else if (msg.event === 'error') {
           const err = JSON.parse(msg.data)
-          toast.error(`Ошибка: ${err.filename} — ${err.error}`)
+          toast.error(`Error: ${err.filename} — ${err.error}`)
         }
       }
     } catch (e) {
-      toast.error('Ошибка при авто-тегировании')
+      toast.error('Auto-tagging error')
     } finally {
       setBatchAutoTagging(false)
     }
@@ -256,9 +256,9 @@ export default function EditorPanel() {
     return (
       <aside className="w-full md:w-80 lg:w-96 xl:w-[440px] border-l border-coal-700 bg-coal-900 flex items-center justify-center">
         <div className="text-center px-8">
-          <p className="font-mono text-sm text-paper-muted mb-2">Выберите кадр</p>
-          <p className="font-mono text-xs text-paper-faint">Кликните на изображение в сетке</p>
-          <p className="font-mono text-xs text-paper-faint mt-1"><kbd className="border border-coal-600 px-1 rounded">&larr;</kbd> <kbd className="border border-coal-600 px-1 rounded">&rarr;</kbd> навигация</p>
+          <p className="font-mono text-sm text-paper-muted mb-2">Select a frame</p>
+          <p className="font-mono text-xs text-paper-faint">Click an image in the grid</p>
+          <p className="font-mono text-xs text-paper-faint mt-1"><kbd className="border border-coal-600 px-1 rounded">&larr;</kbd> <kbd className="border border-coal-600 px-1 rounded">&rarr;</kbd> navigate</p>
         </div>
       </aside>
     )
@@ -269,13 +269,13 @@ export default function EditorPanel() {
       {showGpuDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowGpuDialog(false)}>
           <div className="bg-coal-900 border border-coal-700 rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-display text-lg text-paper mb-3">CUDA не обнаружена</h3>
+            <h3 className="font-display text-lg text-paper mb-3">CUDA not found</h3>
             <p className="font-mono text-sm text-paper-muted mb-6 leading-relaxed">
-              На вашей системе не найден GPU (CUDA). Авто-тегирование будет работать на CPU — это может быть значительно медленнее.
+              No GPU (CUDA) found on your system. Auto-tagging will use the CPU — this may be significantly slower.
             </p>
             <div className="flex items-center justify-end gap-3">
-              <button onClick={() => setShowGpuDialog(false)} className="px-4 py-2 text-xs font-mono text-paper-muted border border-coal-600 rounded-md hover:text-paper">Отмена</button>
-              <button onClick={() => { setShowGpuDialog(false); setGpuFallbackConfirmed(true); }} className="px-4 py-2 text-xs font-mono bg-cyano text-coal-950 rounded-md font-semibold hover:bg-cyano/90">Использовать CPU</button>
+              <button onClick={() => setShowGpuDialog(false)} className="px-4 py-2 text-xs font-mono text-paper-muted border border-coal-600 rounded-md hover:text-paper">Cancel</button>
+              <button onClick={() => { setShowGpuDialog(false); setGpuFallbackConfirmed(true); }} className="px-4 py-2 text-xs font-mono bg-cyano text-coal-950 rounded-md font-semibold hover:bg-cyano/90">Use CPU</button>
             </div>
           </div>
         </div>
@@ -284,11 +284,11 @@ export default function EditorPanel() {
       <aside className="w-full md:w-80 lg:w-96 xl:w-[440px] border-l border-coal-700 bg-coal-900 flex flex-col overflow-hidden">
         {isBatch ? (
           <div className="px-4 py-2 border-b border-coal-700 flex items-center justify-between gap-2">
-            <span className="font-mono text-xs text-cyano truncate">выбрано {selectedFilenames.length} / {total}</span>
+            <span className="font-mono text-xs text-cyano truncate">selected {selectedFilenames.length} / {total}</span>
             <div className="flex items-center gap-2 shrink-0">
-              <button onClick={handleSave} disabled={batchSaving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{batchSaving ? '...' : 'Сохранить всем'}</button>
+              <button onClick={handleSave} disabled={batchSaving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{batchSaving ? '...' : 'Save all'}</button>
               {(autoTagState === 'ready' || autoTagState === 'unloaded') && (
-                <button onClick={handleBatchAutoTag} disabled={batchAutoTagging} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-cyano/50 rounded-md text-cyano hover:bg-coal-700" title="Авто-теги выбранным"><Sparkles size={14} />{batchAutoTagging ? '...' : 'Auto'}</button>
+                <button onClick={handleBatchAutoTag} disabled={batchAutoTagging} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-cyano/50 rounded-md text-cyano hover:bg-coal-700" title="Auto-tag selected"><Sparkles size={14} />{batchAutoTagging ? '...' : 'Auto'}</button>
               )}
               <button onClick={() => setPanelOpen(false)} className="text-paper-faint hover:text-paper md:hidden"><X size={16} /></button>
             </div>
@@ -297,14 +297,14 @@ export default function EditorPanel() {
           <div className="px-4 py-2 border-b border-coal-700 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <button onClick={() => setPanelOpen(false)} className="text-paper-faint hover:text-paper md:hidden shrink-0"><X size={16} /></button>
-              <span className="font-mono text-xs text-paper-muted truncate">кадр {selectedIdx + 1} / {total}</span>
+              <span className="font-mono text-xs text-paper-muted truncate">frame {selectedIdx + 1} / {total}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className={`w-2 h-2 rounded-full ${dirty ? 'bg-safe animate-pulse shadow-[0_0_6px_#f5a02c]' : 'bg-cyano'}`} />
               <button onClick={() => setTagMode(!tagMode)} className="text-paper-faint hover:text-paper"><Type size={16} /></button>
-              <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{saving ? '...' : 'Сохранить'}</button>
+              <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-coal-600 rounded-md text-paper hover:bg-coal-700"><Save size={14} />{saving ? '...' : 'Save'}</button>
               {(autoTagState === 'ready' || autoTagState === 'unloaded') && (
-                <button onClick={handleAutoTag} disabled={autoTagging} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-cyano/50 rounded-md text-cyano hover:bg-coal-700" title="Авто-теги"><Sparkles size={14} />{autoTagging ? '...' : 'Auto'}</button>
+                <button onClick={handleAutoTag} disabled={autoTagging} className="flex items-center gap-1 px-2 py-1 text-xs font-mono bg-coal-800 border border-cyano/50 rounded-md text-cyano hover:bg-coal-700" title="Auto-tag"><Sparkles size={14} />{autoTagging ? '...' : 'Auto'}</button>
               )}
             </div>
           </div>
@@ -314,7 +314,7 @@ export default function EditorPanel() {
           <div className="flex-1 overflow-y-auto bg-coal-950 px-4 py-3">
             {commonTags.length > 0 && (
               <div className="mb-3">
-                <p className="font-mono text-xs text-paper-faint mb-1.5">Общие теги ({commonTags.length}):</p>
+                <p className="font-mono text-xs text-paper-faint mb-1.5">Common tags ({commonTags.length}):</p>
                 <div className="flex flex-wrap gap-1">
                   {commonTags.map((tag, i) => {
                     const isRemoved = removedTags.includes(tag)
@@ -381,16 +381,16 @@ export default function EditorPanel() {
                   })}
                 </div>
                 {differingCount > 0 && (
-                  <p className="font-mono text-xs text-paper-faint mt-1.5">...и ещё {differingCount} тегов различаются</p>
+                  <p className="font-mono text-xs text-paper-faint mt-1.5">...and {differingCount} tags differ</p>
                 )}
                 {removedTags.length > 0 && (
-                  <p className="font-mono text-xs text-ember mt-1.5">Будут удалены: {removedTags.join(', ')}</p>
+                  <p className="font-mono text-xs text-ember mt-1.5">Will be removed: {removedTags.join(', ')}</p>
                 )}
               </div>
             )}
             {commonTags.length === 0 && differingCount === 0 && (
               <div className="flex items-center justify-center h-full">
-                <p className="font-mono text-xs text-paper-faint">У выбранных кадров нет капшенов</p>
+                <p className="font-mono text-xs text-paper-faint">Selected frames have no captions</p>
               </div>
             )}
           </div>
@@ -423,11 +423,11 @@ export default function EditorPanel() {
                   onChange={(e) => setBatchMode(e.target.value as 'append' | 'prepend' | 'set')}
                   className="bg-coal-800 text-paper text-xs font-mono border border-coal-600 rounded-md px-2 py-1"
                 >
-                  <option value="append">В конец</option>
-                  <option value="prepend">В начало</option>
-                  <option value="set">Заменить</option>
+                  <option value="append">Append</option>
+                  <option value="prepend">Prepend</option>
+                  <option value="set">Replace</option>
                 </select>
-                <span className="font-mono text-xs text-paper-faint">для {selectedFilenames.length} кадров</span>
+                <span className="font-mono text-xs text-paper-faint">for {selectedFilenames.length} frames</span>
               </>
             )}
           </div>
@@ -480,7 +480,7 @@ export default function EditorPanel() {
               </DndContext>
               <input
                 type="text"
-                placeholder="Добавить тег и Enter..."
+                placeholder="Add tag and press Enter..."
                 onKeyDown={handleAddTag}
                 onKeyUp={(e) => { if (e.key === 'Backspace' && !e.currentTarget.value) { handleRemoveTag(tags.length - 1) } }}
                 className="w-full bg-transparent text-sm text-paper placeholder-paper-faint outline-none font-mono"
@@ -491,7 +491,7 @@ export default function EditorPanel() {
               value={caption}
               onChange={(e) => { setCaption(e.target.value); setDirty(true) }}
               className="w-full h-32 bg-coal-800 text-paper text-sm font-mono p-2 rounded-md border border-coal-600 outline-none resize-none placeholder-paper-faint"
-              placeholder="Введите капшен..."
+              placeholder="Enter caption..."
             />
           )}
         </div>

@@ -13,11 +13,11 @@ export default function BatchPanel() {
   const { mutate: runBatch, isPending } = useMutation({
     mutationFn: (body: BatchRequest) => api.batch(body),
     onSuccess: (data) => {
-      toast.success(`Изменено файлов: ${data.changed} из ${data.total}`)
+      toast.success(`Files changed: ${data.changed} of ${data.total}`)
       queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['stats'] })
     },
-    onError: () => toast.error('Ошибка при выполнении операции'),
+    onError: () => toast.error('Operation error'),
   })
 
   const handleApply = () => {
@@ -33,17 +33,17 @@ export default function BatchPanel() {
           onChange={(e) => setOp(e.target.value as BatchRequest['op'])}
           className="bg-coal-800 text-paper text-sm border border-coal-600 rounded-md px-2 py-1.5 font-mono"
         >
-          <option value="prepend">В начало</option>
-          <option value="append">В конец</option>
-          <option value="remove_tag">Удалить тег</option>
-          <option value="regex_replace">Regex замена</option>
+          <option value="prepend">Prepend</option>
+          <option value="append">Append</option>
+          <option value="remove_tag">Remove tag</option>
+          <option value="regex_replace">Regex replace</option>
         </select>
 
         <input
           type="text"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder={op === 'regex_replace' ? 'шаблон...' : 'значение...'}
+          placeholder={op === 'regex_replace' ? 'pattern...' : 'value...'}
           className="bg-coal-800 text-paper text-sm border border-coal-600 rounded-md px-2 py-1.5 font-mono flex-1 min-w-40 placeholder-paper-faint"
         />
 
@@ -52,14 +52,14 @@ export default function BatchPanel() {
             type="text"
             value={value2}
             onChange={(e) => setValue2(e.target.value)}
-            placeholder="замена..."
+            placeholder="replacement..."
             className="bg-coal-800 text-paper text-sm border border-coal-600 rounded-md px-2 py-1.5 font-mono flex-1 min-w-32 placeholder-paper-faint"
           />
         )}
 
         <label className="flex items-center gap-1.5 text-xs font-mono text-paper-muted cursor-pointer">
           <input type="checkbox" checked={onlyUntagged} onChange={(e) => setOnlyUntagged(e.target.checked)} className="accent-safe" />
-          только пустые
+          untagged only
         </label>
 
         <button
@@ -67,7 +67,7 @@ export default function BatchPanel() {
           disabled={!value.trim() || isPending}
           className="px-4 py-1.5 text-xs font-mono uppercase tracking-wider bg-safe text-coal-950 rounded-md font-semibold disabled:opacity-50"
         >
-          {isPending ? '...' : 'Применить'}
+          {isPending ? '...' : 'Apply'}
         </button>
       </div>
     </div>

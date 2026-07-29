@@ -412,13 +412,13 @@ class ModelNotDownloadedError(Exception):
 
 def _mode_label(mode_id: str) -> str:
     labels = {
-        "generate_tags": "Теги",
-        "caption": "Описание",
-        "detailed_caption": "Детальное описание",
-        "more_detailed_caption": "Максимально детально",
-        "analyze": "Анализ композиции",
-        "mixed_caption": "Смешанный (теги+описание)",
-        "mixed_caption_plus": "Смешанный+анализ",
+        "generate_tags": "Tags",
+        "caption": "Caption",
+        "detailed_caption": "Detailed caption",
+        "more_detailed_caption": "More detailed caption",
+        "analyze": "Composition analysis",
+        "mixed_caption": "Mixed (tags+caption)",
+        "mixed_caption_plus": "Mixed+analysis",
     }
     return labels.get(mode_id, mode_id)
 

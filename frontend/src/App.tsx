@@ -18,14 +18,14 @@ function App() {
   const setItems = useDatasetStore((s) => s.setItems)
   const panelOpen = useDatasetStore((s) => s.panelOpen)
   const setPanelOpen = useDatasetStore((s) => s.setPanelOpen)
-  const filterUntagged = useDatasetStore((s) => s.filterUntagged)
+  const datasetFilter = useDatasetStore((s) => s.datasetFilter)
   const searchQuery = useDatasetStore((s) => s.searchQuery)
   const setAutoTagStatus = useDatasetStore((s) => s.setAutoTagStatus)
   const setAutoTagModes = useDatasetStore((s) => s.setAutoTagModes)
 
   const { data } = useQuery({
-    queryKey: ['items', filterUntagged, searchQuery],
-    queryFn: () => api.getItems(0, 20000, filterUntagged, searchQuery || undefined),
+    queryKey: ['items', datasetFilter, searchQuery],
+    queryFn: () => api.getItems(0, 20000, datasetFilter === 'untagged', searchQuery || undefined),
     placeholderData: (prev) => prev,
   })
 

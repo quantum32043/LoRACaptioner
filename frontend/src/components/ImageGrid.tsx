@@ -9,7 +9,7 @@ export default function ImageGrid() {
   const selectedFilename = useDatasetStore((s) => s.selectedFilename)
   const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
   const toggleSelection = useDatasetStore((s) => s.toggleSelection)
-  const triggerFilter = useDatasetStore((s) => s.triggerFilter)
+  const datasetFilter = useDatasetStore((s) => s.datasetFilter)
   const triggerResults = useDatasetStore((s) => s.triggerResults)
   const triggerWords = useDatasetStore((s) => s.triggerWords)
   const parentRef = useRef<HTMLDivElement>(null)
@@ -21,16 +21,17 @@ export default function ImageGrid() {
   const [selectionRect, setSelectionRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null)
 
   const filteredItems = useMemo(() => {
-    if (triggerWords.length === 0 || triggerFilter === 'all') return items
+    if (datasetFilter === 'all') return items
+    if (datasetFilter === 'untagged') return items.filter((i) => !i.tagged)
+    if (triggerWords.length === 0) return items
     return items.filter((item) => {
       const r = triggerResults[item.filename]
-      if (!r) return triggerFilter === 'missing'
-      if (triggerFilter === 'has_trigger') return r.status === 'exact'
-      if (triggerFilter === 'missing') return r.status === 'missing'
-      if (triggerFilter === 'warning') return r.status === 'case' || r.status === 'separator'
+      if (datasetFilter === 'has_trigger') return r?.status === 'exact'
+      if (datasetFilter === 'no_trigger') return !r || r.status === 'missing'
+      if (datasetFilter === 'trigger_warning') return r && (r.status === 'case' || r.status === 'separator')
       return true
     })
-  }, [items, triggerFilter, triggerResults, triggerWords])
+  }, [items, datasetFilter, triggerResults, triggerWords])
 
   const cols = Math.max(1, Math.floor((parentRef.current?.clientWidth ?? 800) / 220))
   const rows = Math.ceil(filteredItems.length / cols)

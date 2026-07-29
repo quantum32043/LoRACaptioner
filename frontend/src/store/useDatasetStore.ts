@@ -29,14 +29,14 @@ interface DatasetState {
   total: number
   selectedFilename: string | null
   selectedFilenames: string[]
-  filterUntagged: boolean
+  datasetFilter: 'all' | 'untagged' | 'has_trigger' | 'no_trigger' | 'trigger_warning'
   searchQuery: string
   panelOpen: boolean
   setItems: (items: Item[], total: number) => void
   setSelected: (filename: string | null) => void
   toggleSelection: (filename: string) => void
   clearSelection: () => void
-  setFilterUntagged: (v: boolean) => void
+  setDatasetFilter: (f: 'all' | 'untagged' | 'has_trigger' | 'no_trigger' | 'trigger_warning') => void
   setSearchQuery: (q: string) => void
   setPanelOpen: (open: boolean) => void
   updateItem: (filename: string, caption: string) => void
@@ -67,12 +67,10 @@ interface DatasetState {
   triggerCheckStats: TriggerCheckStats | null
   triggerPanelOpen: boolean
   triggerResults: Record<string, { status: string; variant: string | null }>
-  triggerFilter: 'all' | 'has_trigger' | 'missing' | 'warning'
   setTriggerWords: (words: string[]) => void
   setTriggerCheckStats: (stats: TriggerCheckStats | null) => void
   setTriggerPanelOpen: (open: boolean) => void
   setTriggerResults: (results: Record<string, { status: string; variant: string | null }>) => void
-  setTriggerFilter: (filter: 'all' | 'has_trigger' | 'missing' | 'warning') => void
 }
 
 export const useDatasetStore = create<DatasetState>((set) => ({
@@ -80,7 +78,7 @@ export const useDatasetStore = create<DatasetState>((set) => ({
   total: 0,
   selectedFilename: null,
   selectedFilenames: [],
-  filterUntagged: false,
+  datasetFilter: 'all',
   searchQuery: '',
   panelOpen: false,
   setItems: (items, total) => set({ items, total }),
@@ -95,7 +93,7 @@ export const useDatasetStore = create<DatasetState>((set) => ({
       }
     }),
   clearSelection: () => set({ selectedFilenames: [], selectedFilename: null }),
-  setFilterUntagged: (v) => set({ filterUntagged: v }),
+  setDatasetFilter: (f) => set({ datasetFilter: f }),
   setSearchQuery: (q) => set({ searchQuery: q }),
   setPanelOpen: (open) => set({ panelOpen: open }),
   updateItem: (filename, caption) =>
@@ -143,10 +141,8 @@ export const useDatasetStore = create<DatasetState>((set) => ({
   triggerCheckStats: null,
   triggerPanelOpen: false,
   triggerResults: {},
-  triggerFilter: 'all',
   setTriggerWords: (words) => set({ triggerWords: words }),
   setTriggerCheckStats: (stats) => set({ triggerCheckStats: stats }),
   setTriggerPanelOpen: (open) => set({ triggerPanelOpen: open }),
   setTriggerResults: (results) => set({ triggerResults: results }),
-  setTriggerFilter: (filter) => set({ triggerFilter: filter }),
 }))

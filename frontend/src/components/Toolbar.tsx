@@ -1,18 +1,16 @@
-import { Search, Filter, PanelRightClose, Package, Target, X } from 'lucide-react'
+import { Search, PanelRightClose, Package, Target, X } from 'lucide-react'
 import { useDatasetStore } from '../store/useDatasetStore'
 import AutoTagPanel from './AutoTagPanel'
 
 export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBatch: () => void; onToggleTrigger: () => void }) {
   const searchQuery = useDatasetStore((s) => s.searchQuery)
-  const filterUntagged = useDatasetStore((s) => s.filterUntagged)
+  const datasetFilter = useDatasetStore((s) => s.datasetFilter)
   const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
   const selectedFilename = useDatasetStore((s) => s.selectedFilename)
   const setSearchQuery = useDatasetStore((s) => s.setSearchQuery)
-  const setFilterUntagged = useDatasetStore((s) => s.setFilterUntagged)
+  const setDatasetFilter = useDatasetStore((s) => s.setDatasetFilter)
   const clearSelection = useDatasetStore((s) => s.clearSelection)
   const setPanelOpen = useDatasetStore((s) => s.setPanelOpen)
-  const triggerFilter = useDatasetStore((s) => s.triggerFilter)
-  const setTriggerFilter = useDatasetStore((s) => s.setTriggerFilter)
 
   const hasSelection = selectedFilenames.length > 0 || selectedFilename !== null
   const selectionCount = selectedFilenames.length || (selectedFilename ? 1 : 0)
@@ -25,22 +23,22 @@ export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBa
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Поиск..."
+          placeholder="Search..."
           className="bg-transparent text-sm text-paper placeholder-paper-faint outline-none w-full font-mono"
         />
       </div>
 
-      <button
-        onClick={() => setFilterUntagged(!filterUntagged)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono uppercase tracking-wider rounded-md border transition-colors shrink-0 ${
-          filterUntagged
-            ? 'bg-safe/20 text-safe border-safe'
-            : 'text-paper-muted border-coal-600 hover:text-paper'
-        }`}
+      <select
+        value={datasetFilter}
+        onChange={(e) => setDatasetFilter(e.target.value as any)}
+        className="bg-coal-800 text-paper text-xs font-mono border border-coal-600 rounded-md px-2 py-1.5 shrink-0"
       >
-        <Filter size={14} />
-        <span className="hidden sm:inline">Только пустые</span>
-      </button>
+        <option value="all">All</option>
+        <option value="untagged">Untagged only</option>
+        <option value="has_trigger">Has trigger</option>
+        <option value="no_trigger">No trigger</option>
+        <option value="trigger_warning">Warnings</option>
+      </select>
 
       <button
         onClick={onToggleBatch}
@@ -58,17 +56,6 @@ export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBa
         <span className="hidden sm:inline">Trigger</span>
       </button>
 
-      <select
-        value={triggerFilter}
-        onChange={(e) => setTriggerFilter(e.target.value as any)}
-        className="bg-coal-800 text-paper text-xs font-mono border border-coal-600 rounded-md px-2 py-1.5 shrink-0"
-      >
-        <option value="all">Все</option>
-        <option value="has_trigger">С триггером</option>
-        <option value="missing">Без триггера</option>
-        <option value="warning">С варнингами</option>
-      </select>
-
       <AutoTagPanel />
 
       {hasSelection && (
@@ -77,7 +64,7 @@ export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBa
           className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono text-paper-faint hover:text-paper border border-coal-600 rounded-md shrink-0"
         >
           <X size={14} />
-          <span className="hidden sm:inline">Снять ({selectionCount})</span>
+          <span className="hidden sm:inline">Clear ({selectionCount})</span>
         </button>
       )}
 
@@ -86,7 +73,7 @@ export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBa
         className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono text-paper-muted hover:text-paper border border-coal-600 rounded-md md:hidden shrink-0"
       >
         <PanelRightClose size={14} />
-        <span className="hidden sm:inline">Панель</span>
+        <span className="hidden sm:inline">Panel</span>
       </button>
     </div>
   )

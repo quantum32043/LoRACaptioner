@@ -41,12 +41,12 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
             <span className={`ml-auto font-mono text-[11px] uppercase tracking-wider ${
               tr.status === 'missing' ? 'text-ember' : 'text-safe'
             }`}>
-              {tr.status === 'missing' ? 'нет триггера' : 'триггер'}
+              {tr.status === 'missing' ? 'no trigger' : 'trigger'}
             </span>
           )}
         </div>
         <p className="font-mono text-xs text-paper-muted leading-snug line-clamp-2">
-          {item.caption || <span className="text-safe/60 italic">без капшена</span>}
+          {item.caption || <span className="text-safe/60 italic">no caption</span>}
         </p>
       </div>
     </button>

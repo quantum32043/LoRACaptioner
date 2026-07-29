@@ -55,7 +55,7 @@ export default function TopBar() {
         const data = await res.json()
         totalSaved += data.saved || 0
       } catch {
-        toast.error(`Ошибка при загрузке файлов ${i + 1}-${i + chunk.length}`)
+        toast.error(`Error uploading files ${i + 1}-${i + chunk.length}`)
       }
 
       setProgress({ current: Math.min(i + CHUNK_SIZE, files.length), total: files.length })
@@ -66,7 +66,7 @@ export default function TopBar() {
     setItems(itemsData.items, itemsData.total)
     refetch()
     setUploading(false)
-    toast.success(`Загружено ${totalSaved} файлов. Всего в датасете: ${newData.total}`)
+    toast.success(`Uploaded ${totalSaved} files. Total in dataset: ${newData.total}`)
   }, [refetch, setItems])
 
   const progressText = uploading ? `${progress.current}/${progress.total}` : ''
@@ -114,7 +114,7 @@ export default function TopBar() {
           className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-safe hover:text-safe/80 border border-safe/40 rounded-md disabled:opacity-50"
         >
           <FolderUp size={14} className={uploading ? 'animate-pulse' : ''} />
-          <span className="hidden md:inline">{uploading ? progressText : 'Выбрать папку'}</span>
+          <span className="hidden md:inline">{uploading ? progressText : 'Open folder'}</span>
         </button>
 
         <button
@@ -123,7 +123,7 @@ export default function TopBar() {
           className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-paper-muted hover:text-paper border border-coal-600 rounded-md disabled:opacity-50"
         >
           <RotateCw size={14} className={rescanning ? 'animate-spin' : ''} />
-          <span className="hidden md:inline">Рескан</span>
+          <span className="hidden md:inline">Rescan</span>
         </button>
       </div>
     </header>

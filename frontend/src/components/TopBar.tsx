@@ -138,38 +138,41 @@ export default function TopBar() {
         </div>
 
         {triggerWords.length > 0 && triggerCheckStats && problemCount > 0 && (
-          <span className={`flex items-center gap-1 text-xs font-mono ${triggerCheckStats.missing > 0 ? 'text-ember' : 'text-safe'}`}>
-            {triggerCheckStats.missing > 0 ? <AlertCircle size={14} /> : <AlertTriangle size={14} />}
+          <span className={`flex items-center gap-1 text-xs font-mono ${triggerCheckStats.missing > 0 ? 'text-ember' : 'text-safe'}`} aria-label={`${problemCount} trigger issues`}>
+            {triggerCheckStats.missing > 0 ? <AlertCircle size={14} aria-hidden="true" /> : <AlertTriangle size={14} aria-hidden="true" />}
             {problemCount}
           </span>
         )}
 
-        <input ref={inputRef} type="file" {...{ webkitdirectory: '' }} multiple className="hidden" onChange={handleFolderPick} />
+        <input ref={inputRef} type="file" {...{ webkitdirectory: '' }} multiple className="hidden" onChange={handleFolderPick} aria-label="Select folder with images" />
 
         <button
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
+          aria-label="Open folder"
           className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-safe hover:text-safe/80 border border-safe/40 rounded-md disabled:opacity-50"
         >
-          <FolderUp size={14} className={uploading ? 'animate-pulse' : ''} />
+          <FolderUp size={14} className={uploading ? 'animate-pulse' : ''} aria-hidden="true" />
           <span className="hidden md:inline">{uploading ? progressText : 'Open folder'}</span>
         </button>
 
         <button
           onClick={() => doRescan()}
           disabled={rescanning}
+          aria-label="Rescan dataset"
           className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-paper-muted hover:text-paper border border-coal-600 rounded-md disabled:opacity-50"
         >
-          <RotateCw size={14} className={rescanning ? 'animate-spin' : ''} />
+          <RotateCw size={14} className={rescanning ? 'animate-spin' : ''} aria-hidden="true" />
           <span className="hidden md:inline">Rescan</span>
         </button>
 
         <button
           onClick={handleExport}
           disabled={exporting}
+          aria-label="Export dataset"
           className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-paper-muted hover:text-paper border border-coal-600 rounded-md disabled:opacity-50"
         >
-          <Download size={14} className={exporting ? 'animate-pulse' : ''} />
+          <Download size={14} className={exporting ? 'animate-pulse' : ''} aria-hidden="true" />
           <span className="hidden md:inline">{exporting ? '...' : 'Export'}</span>
         </button>
       </div>

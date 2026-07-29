@@ -162,6 +162,7 @@ export default function TriggerPanel() {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTrigger() } }}
             placeholder="trigger word..."
+            aria-label="Add trigger word"
             className="bg-transparent text-sm text-paper placeholder-paper-faint outline-none font-mono w-24"
           />
           <button

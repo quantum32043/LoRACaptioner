@@ -18,12 +18,13 @@ export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBa
   return (
     <div className="flex items-center gap-2 px-4 h-12 border-b border-coal-700 bg-coal-900">
       <div className="flex items-center gap-2 flex-1 min-w-0 max-w-md">
-        <Search size={16} className="text-paper-faint shrink-0" />
+        <Search size={16} className="text-paper-faint shrink-0" aria-hidden="true" />
         <input
-          type="text"
+          type="search"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search..."
+          aria-label="Search frames"
           className="bg-transparent text-sm text-paper placeholder-paper-faint outline-none w-full font-mono"
         />
       </div>
@@ -31,6 +32,7 @@ export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBa
       <select
         value={datasetFilter}
         onChange={(e) => setDatasetFilter(e.target.value as any)}
+        aria-label="Filter frames"
         className="bg-coal-800 text-paper text-xs font-mono border border-coal-600 rounded-md px-2 py-1.5 shrink-0"
       >
         <option value="all">All</option>
@@ -42,17 +44,19 @@ export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBa
 
       <button
         onClick={onToggleBatch}
+        aria-label="Batch operations"
         className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-paper-muted hover:text-paper border border-coal-600 rounded-md shrink-0"
       >
-        <Package size={14} />
+        <Package size={14} aria-hidden="true" />
         <span className="hidden sm:inline">Batch</span>
       </button>
 
       <button
         onClick={onToggleTrigger}
+        aria-label="Trigger words"
         className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-paper-muted hover:text-paper border border-coal-600 rounded-md shrink-0"
       >
-        <Target size={14} />
+        <Target size={14} aria-hidden="true" />
         <span className="hidden sm:inline">Trigger</span>
       </button>
 
@@ -61,18 +65,20 @@ export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBa
       {hasSelection && (
         <button
           onClick={clearSelection}
+          aria-label={`Clear selection (${selectionCount})`}
           className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono text-paper-faint hover:text-paper border border-coal-600 rounded-md shrink-0"
         >
-          <X size={14} />
+          <X size={14} aria-hidden="true" />
           <span className="hidden sm:inline">Clear ({selectionCount})</span>
         </button>
       )}
 
       <button
         onClick={() => setPanelOpen(true)}
+        aria-label="Open editor panel"
         className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono text-paper-muted hover:text-paper border border-coal-600 rounded-md md:hidden shrink-0"
       >
-        <PanelRightClose size={14} />
+        <PanelRightClose size={14} aria-hidden="true" />
         <span className="hidden sm:inline">Panel</span>
       </button>
     </div>

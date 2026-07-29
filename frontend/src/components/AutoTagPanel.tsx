@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Sparkles, Download, Trash2, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -234,6 +234,17 @@ export default function AutoTagPanel() {
     setGpuFallbackConfirmed(true)
   }, [setGpuFallbackConfirmed])
 
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showMenu) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowMenu(false)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [showMenu])
+
   const isIdle = autoTagState === 'ready' || autoTagState === 'unloaded'
   const pct = downloadProgress && downloadProgress.total_bytes > 0
     ? Math.round((downloadProgress.downloaded_bytes / downloadProgress.total_bytes) * 100)
@@ -251,20 +262,23 @@ export default function AutoTagPanel() {
       <div className="relative">
         <button
           onClick={() => setShowMenu(!showMenu)}
+          aria-expanded={showMenu}
+          aria-controls="auto-tag-menu"
+          aria-label="Auto-tagging options"
           className={`flex items-center gap-1 px-3 py-1.5 text-xs font-mono uppercase tracking-wider rounded-md border shrink-0 transition-colors ${
             showMenu
               ? 'bg-cyano/20 text-cyano border-cyano'
               : 'text-cyano/80 hover:text-cyano border-cyano/30'
           }`}
         >
-          <Sparkles size={14} className={!isIdle ? 'animate-pulse' : ''} />
+          <Sparkles size={14} className={!isIdle ? 'animate-pulse' : ''} aria-hidden="true" />
           <span className="hidden sm:inline">Auto</span>
         </button>
 
         {showMenu && (
           <>
             <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />
-            <div className="absolute right-0 top-full mt-1 z-40 w-72 bg-coal-900 border border-coal-700 rounded-xl shadow-2xl p-4">
+            <div id="auto-tag-menu" ref={menuRef} className="absolute right-0 top-full mt-1 z-40 w-72 bg-coal-900 border border-coal-700 rounded-xl shadow-2xl p-4">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-mono text-xs text-paper-muted">Auto-tagging</span>
                 <span className={`font-mono text-xs ${stateColor[autoTagState]}`}>
@@ -301,6 +315,10 @@ export default function AutoTagPanel() {
                   step="0.1"
                   value={autoTagTemperature}
                   onChange={(e) => doSetTemperature(parseFloat(e.target.value))}
+                  aria-label="Temperature"
+                  aria-valuenow={autoTagTemperature}
+                  aria-valuemin={0.1}
+                  aria-valuemax={2.0}
                   className="w-full h-1.5 bg-coal-700 rounded-full appearance-none cursor-pointer accent-cyano"
                 />
                 <div className="flex justify-between text-[10px] font-mono text-paper-faint mt-0.5">

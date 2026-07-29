@@ -16,7 +16,7 @@ export default function StatusStrip() {
       </div>
       <div className="flex items-center gap-3">
         <span><kbd className="text-paper-muted border border-coal-600 px-1 rounded">←</kbd> <kbd className="text-paper-muted border border-coal-600 px-1 rounded">→</kbd> navigate</span>
-        <span><kbd className="text-paper-muted border border-coal-600 px-1 rounded">⌘S</kbd> save</span>
+        <span><kbd className="text-paper-muted border border-coal-600 px-1 rounded">Ctrl+S</kbd> save</span>
       </div>
     </div>
   )

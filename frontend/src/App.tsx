@@ -6,12 +6,15 @@ import { useDatasetStore } from './store/useDatasetStore'
 import TopBar from './components/TopBar'
 import Toolbar from './components/Toolbar'
 import BatchPanel from './components/BatchPanel'
+import TriggerPanel from './components/TriggerPanel'
 import ImageGrid from './components/ImageGrid'
 import EditorPanel from './components/EditorPanel'
 import StatusStrip from './components/StatusStrip'
 
 function App() {
   const [batchOpen, setBatchOpen] = useState(false)
+  const triggerPanelOpen = useDatasetStore((s) => s.triggerPanelOpen)
+  const setTriggerPanelOpen = useDatasetStore((s) => s.setTriggerPanelOpen)
   const setItems = useDatasetStore((s) => s.setItems)
   const panelOpen = useDatasetStore((s) => s.panelOpen)
   const setPanelOpen = useDatasetStore((s) => s.setPanelOpen)
@@ -55,8 +58,9 @@ function App() {
       <div className="film-grain fixed inset-0 z-50" />
       <div className="vignette fixed inset-0 z-40" />
       <TopBar />
-      <Toolbar onToggleBatch={() => setBatchOpen(!batchOpen)} />
+      <Toolbar onToggleBatch={() => setBatchOpen(!batchOpen)} onToggleTrigger={() => setTriggerPanelOpen(!triggerPanelOpen)} />
       {batchOpen && <BatchPanel />}
+      {triggerPanelOpen && <TriggerPanel />}
       <div className="flex flex-1 overflow-hidden relative z-10">
         <div className="flex flex-col flex-1 overflow-hidden min-w-0">
           <ImageGrid />

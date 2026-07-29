@@ -1,8 +1,8 @@
-import { Search, Filter, PanelRightClose, Package, X } from 'lucide-react'
+import { Search, Filter, PanelRightClose, Package, Target, X } from 'lucide-react'
 import { useDatasetStore } from '../store/useDatasetStore'
 import AutoTagPanel from './AutoTagPanel'
 
-export default function Toolbar({ onToggleBatch }: { onToggleBatch: () => void }) {
+export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBatch: () => void; onToggleTrigger: () => void }) {
   const searchQuery = useDatasetStore((s) => s.searchQuery)
   const filterUntagged = useDatasetStore((s) => s.filterUntagged)
   const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
@@ -46,6 +46,14 @@ export default function Toolbar({ onToggleBatch }: { onToggleBatch: () => void }
       >
         <Package size={14} />
         <span className="hidden sm:inline">Batch</span>
+      </button>
+
+      <button
+        onClick={onToggleTrigger}
+        className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-paper-muted hover:text-paper border border-coal-600 rounded-md shrink-0"
+      >
+        <Target size={14} />
+        <span className="hidden sm:inline">Trigger</span>
       </button>
 
       <AutoTagPanel />

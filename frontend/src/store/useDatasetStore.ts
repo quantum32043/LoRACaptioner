@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Item, AutoTagStatus, TaskMode } from '../api/client'
+import type { Item, AutoTagStatus, TaskMode, TriggerCheckStats } from '../api/client'
 
 export type AutoTagState =
   | 'unavailable'
@@ -62,6 +62,15 @@ interface DatasetState {
   setBatchTagProgress: (p: BatchTagProgress | null) => void
   setBatchTagTotal: (t: number | null) => void
   setGpuFallbackConfirmed: (v: boolean) => void
+
+  triggerWords: string[]
+  triggerPosition: number
+  triggerCheckStats: TriggerCheckStats | null
+  triggerPanelOpen: boolean
+  setTriggerWords: (words: string[]) => void
+  setTriggerPosition: (pos: number) => void
+  setTriggerCheckStats: (stats: TriggerCheckStats | null) => void
+  setTriggerPanelOpen: (open: boolean) => void
 }
 
 export const useDatasetStore = create<DatasetState>((set) => ({
@@ -127,4 +136,13 @@ export const useDatasetStore = create<DatasetState>((set) => ({
   setBatchTagProgress: (p) => set({ batchTagProgress: p }),
   setBatchTagTotal: (t) => set({ batchTagTotal: t }),
   setGpuFallbackConfirmed: (v) => set({ gpuFallbackConfirmed: v }),
+
+  triggerWords: [],
+  triggerPosition: 0,
+  triggerCheckStats: null,
+  triggerPanelOpen: false,
+  setTriggerWords: (words) => set({ triggerWords: words, triggerCheckStats: null }),
+  setTriggerPosition: (pos) => set({ triggerPosition: pos, triggerCheckStats: null }),
+  setTriggerCheckStats: (stats) => set({ triggerCheckStats: stats }),
+  setTriggerPanelOpen: (open) => set({ triggerPanelOpen: open }),
 }))

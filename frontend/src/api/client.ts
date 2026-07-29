@@ -70,6 +70,28 @@ export interface AutoTagBatchDone {
   total: number
 }
 
+export interface TriggerCheckResult {
+  filename: string
+  status: 'exact' | 'case' | 'separator' | 'position' | 'missing'
+  found_position: number | null
+  expected_position: number
+  variant: string | null
+}
+
+export interface TriggerCheckStats {
+  total: number
+  exact: number
+  warnings: { type: 'case' | 'separator' | 'position'; count: number; examples: string[] }[]
+  missing: number
+}
+
+export interface TriggerAddRequest {
+  trigger_words: string[]
+  position: 'prepend' | 'append'
+  filenames?: string[] | null
+  only_untagged: boolean
+}
+
 export interface SSEMessage {
   event: string
   data: string
@@ -137,6 +159,10 @@ export const api = {
 
   batch(body: BatchRequest) {
     return fetchJson<BatchResponse>('/dataset/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  },
+
+  triggerAdd(body: TriggerAddRequest) {
+    return fetchJson<BatchResponse>('/dataset/trigger-add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   },
 
   rescan() {

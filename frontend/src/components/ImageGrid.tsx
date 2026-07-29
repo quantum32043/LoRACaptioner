@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useDatasetStore } from '../store/useDatasetStore'
 import ImageCard from './ImageCard'
@@ -12,9 +12,10 @@ export default function ImageGrid() {
   const parentRef = useRef<HTMLDivElement>(null)
   const dragHappenedRef = useRef(false)
 
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
-  const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null)
+  const dragEndRef = useRef<{ x: number; y: number } | null>(null)
+  const isDraggingRef = useRef(false)
+  const [selectionRect, setSelectionRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null)
 
   const cols = Math.max(1, Math.floor((parentRef.current?.clientWidth ?? 800) / 220))
   const rows = Math.ceil(items.length / cols)
@@ -45,71 +46,92 @@ export default function ImageGrid() {
     }
   }, [cols])
 
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    if (e.button !== 0) return
-    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
-    setDragStart({ x: e.clientX, y: e.clientY })
-    setDragEnd({ x: e.clientX, y: e.clientY })
-    setIsDragging(true)
-  }, [])
+  useEffect(() => {
+    const container = parentRef.current
+    if (!container) return
 
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isDragging) return
-    setDragEnd({ x: e.clientX, y: e.clientY })
-  }, [isDragging])
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return
+      const startX = e.clientX
+      const startY = e.clientY
+      dragStartRef.current = { x: startX, y: startY }
+      dragEndRef.current = { x: startX, y: startY }
+      isDraggingRef.current = true
 
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    if (!isDragging || !dragStart || !dragEnd) {
-      setIsDragging(false)
-      setDragStart(null)
-      setDragEnd(null)
-      return
-    }
+      const onMove = (ev: PointerEvent) => {
+        if (!isDraggingRef.current) return
+        dragEndRef.current = { x: ev.clientX, y: ev.clientY }
+        setSelectionRect({
+          left: Math.min(startX, ev.clientX),
+          top: Math.min(startY, ev.clientY),
+          width: Math.abs(ev.clientX - startX),
+          height: Math.abs(ev.clientY - startY),
+        })
+      }
 
-    const dx = Math.abs(dragEnd.x - dragStart.x)
-    const dy = Math.abs(dragEnd.y - dragStart.y)
-    if (dx > 5 || dy > 5) {
-      dragHappenedRef.current = true
-      const selLeft = Math.min(dragStart.x, dragEnd.x)
-      const selTop = Math.min(dragStart.y, dragEnd.y)
-      const selRight = Math.max(dragStart.x, dragEnd.x)
-      const selBottom = Math.max(dragStart.y, dragEnd.y)
+      const onUp = (ev: PointerEvent) => {
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+        isDraggingRef.current = false
+        setSelectionRect(null)
 
-      const toSelect: string[] = []
-      for (let i = 0; i < items.length; i++) {
-        const r = getCardRect(i)
-        if (!r) continue
-        if (r.left < selRight && r.right > selLeft && r.top < selBottom && r.bottom > selTop) {
-          toSelect.push(items[i].filename)
+        const start = dragStartRef.current
+        const end = dragEndRef.current
+        dragStartRef.current = null
+        dragEndRef.current = null
+
+        if (!start || !end) return
+
+        const dx = Math.abs(end.x - start.x)
+        const dy = Math.abs(end.y - start.y)
+
+        if (dx > 5 || dy > 5) {
+          dragHappenedRef.current = true
+
+          const selLeft = Math.min(start.x, end.x)
+          const selTop = Math.min(start.y, end.y)
+          const selRight = Math.max(start.x, end.x)
+          const selBottom = Math.max(start.y, end.y)
+
+          const store = useDatasetStore.getState()
+          const toSelect: string[] = []
+          for (let i = 0; i < store.items.length; i++) {
+            const r = getCardRect(i)
+            if (!r) continue
+            if (r.left < selRight && r.right > selLeft && r.top < selBottom && r.bottom > selTop) {
+              toSelect.push(store.items[i].filename)
+            }
+          }
+
+          if (toSelect.length > 0) {
+            if (ev.ctrlKey || ev.metaKey) {
+              for (const fn of toSelect) {
+                store.toggleSelection(fn)
+              }
+            } else {
+              store.setSelected(null)
+              for (const fn of toSelect) {
+                store.toggleSelection(fn)
+              }
+            }
+          }
         }
       }
 
-      if (toSelect.length > 0) {
-        if (e.ctrlKey || e.metaKey) {
-          for (const fn of toSelect) {
-            toggleSelection(fn)
-          }
-        } else {
-          setSelected(null)
-          for (const fn of toSelect) {
-            toggleSelection(fn)
-          }
-        }
-      }
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
     }
 
-    setIsDragging(false)
-    setDragStart(null)
-    setDragEnd(null)
-  }, [isDragging, dragStart, dragEnd, items, cols, getCardRect, setSelected, toggleSelection])
+    container.addEventListener('pointerdown', onPointerDown)
+    return () => {
+      container.removeEventListener('pointerdown', onPointerDown)
+    }
+  }, [getCardRect])
 
   return (
     <div
       ref={parentRef}
       className="flex-1 overflow-auto p-4 select-none"
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
     >
       <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
         {virtualizer.getVirtualItems().map((virtualRow) => (
@@ -137,24 +159,24 @@ export default function ImageGrid() {
                   index={idx}
                   isSelected={item.filename === selectedFilename}
                   isMultiSelected={selectedFilenames.includes(item.filename)}
-                    onSelect={(e) => {
-                      if (dragHappenedRef.current) {
-                        dragHappenedRef.current = false
-                        return
+                  onSelect={(e) => {
+                    if (dragHappenedRef.current) {
+                      dragHappenedRef.current = false
+                      return
+                    }
+                    if (e.ctrlKey || e.metaKey) {
+                      if (selectedFilename && selectedFilenames.length === 0 && item.filename !== selectedFilename) {
+                        toggleSelection(selectedFilename)
                       }
-                      if (e.ctrlKey || e.metaKey) {
-                        if (selectedFilename && selectedFilenames.length === 0 && item.filename !== selectedFilename) {
-                          toggleSelection(selectedFilename)
-                        }
-                        toggleSelection(item.filename)
-                      } else if (selectedFilenames.includes(item.filename)) {
-                        toggleSelection(item.filename)
-                      } else if (item.filename === selectedFilename) {
-                        setSelected(null)
-                      } else {
-                        setSelected(item.filename)
-                      }
-                    }}
+                      toggleSelection(item.filename)
+                    } else if (selectedFilenames.includes(item.filename)) {
+                      toggleSelection(item.filename)
+                    } else if (item.filename === selectedFilename) {
+                      setSelected(null)
+                    } else {
+                      setSelected(item.filename)
+                    }
+                  }}
                 />
               )
             })}
@@ -162,14 +184,14 @@ export default function ImageGrid() {
         ))}
       </div>
 
-      {isDragging && dragStart && dragEnd && (
+      {selectionRect && (
         <div
           className="fixed z-10 pointer-events-none"
           style={{
-            left: Math.min(dragStart.x, dragEnd.x),
-            top: Math.min(dragStart.y, dragEnd.y),
-            width: Math.abs(dragEnd.x - dragStart.x),
-            height: Math.abs(dragEnd.y - dragStart.y),
+            left: selectionRect.left,
+            top: selectionRect.top,
+            width: selectionRect.width,
+            height: selectionRect.height,
             backgroundColor: 'rgba(34, 211, 238, 0.08)',
             border: '1px solid rgba(34, 211, 238, 0.5)',
           }}

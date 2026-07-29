@@ -71,6 +71,11 @@ class DatasetService:
         result = [{"filename": item.filename, "caption": item.caption, "tagged": item.tagged, "thumb_url": _thumb_url(item.filename), "full_url": _full_url(item.filename)} for item in page]
         return result, total
 
+    @property
+    def filenames(self) -> list[str]:
+        self.ensure_scanned()
+        return list(self._items.keys())
+
     def get_stats(self) -> dict:
         self.ensure_scanned()
         total = len(self._items)

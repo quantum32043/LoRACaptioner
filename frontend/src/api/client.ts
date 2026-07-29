@@ -156,6 +156,19 @@ export const api = {
     return fetchJson<BatchResponse>('/dataset/trigger-add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   },
 
+  async exportDataset() {
+    const res = await fetch('/dataset/export')
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'dataset-export.zip'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  },
+
   rescan() {
     return fetchJson<{ status: string; total: number }>('/dataset/rescan', { method: 'POST' })
   },

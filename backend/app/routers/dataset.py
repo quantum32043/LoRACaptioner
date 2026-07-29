@@ -1,4 +1,7 @@
+import zipfile, tempfile, os
 from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 from pathlib import Path
 from app.models import BatchRequest, TriggerAddRequest, ItemsResponse, Stats, StatusResponse, BatchResponse, RescanResponse
 from app.services.dataset import dataset_service
@@ -57,6 +60,39 @@ async def trigger_add(body: TriggerAddRequest) -> BatchResponse:
         only_untagged=body.only_untagged,
     )
     return BatchResponse(**result)
+
+
+@router.get("/export")
+async def export_dataset():
+    dataset_service.ensure_scanned()
+    dataset_path = Path(settings.dataset_path)
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+    tmp_path = tmp.name
+    tmp.close()
+
+    try:
+        with zipfile.ZipFile(tmp_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for filename in dataset_service.filenames:
+                img_path = dataset_path / filename
+                txt_path = dataset_path / f"{Path(filename).stem}.txt"
+                if img_path.exists():
+                    zf.write(img_path, filename)
+                if txt_path.exists():
+                    zf.write(txt_path, f"{Path(filename).stem}.txt")
+    except Exception:
+        os.unlink(tmp_path)
+        raise
+
+    def cleanup():
+        os.unlink(tmp_path)
+
+    return FileResponse(
+        tmp_path,
+        media_type='application/zip',
+        filename='dataset-export.zip',
+        background=BackgroundTask(cleanup),
+    )
 
 
 @router.post("/rescan")

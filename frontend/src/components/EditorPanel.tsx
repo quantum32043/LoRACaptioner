@@ -9,12 +9,45 @@ import { toast } from 'sonner'
 import { api } from '../api/client'
 import { useDatasetStore } from '../store/useDatasetStore'
 
+function normalize(s: string) {
+  return s.toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function getTagMatchType(tag: string, triggerWords: string[]): 'exact' | 'case' | 'separator' | null {
+  if (!triggerWords.length) return null
+  for (const tw of triggerWords) {
+    const tws = tw.trim()
+    if (!tws) continue
+    if (tag === tws) return 'exact'
+    if (tag.toLowerCase() === tws.toLowerCase()) return 'case'
+    if (normalize(tag) === normalize(tws)) return 'separator'
+  }
+  return null
+}
+
+function highlightCaptionEditor(caption: string, triggerWords: string[]) {
+  if (!triggerWords.length || !caption) return caption
+  const parts = caption.split(/(,\s*)/)
+  return parts.map((part, i) => {
+    const tag = part.replace(/,\s*$/, '').trim()
+    if (!tag) return part
+    const mt = getTagMatchType(tag, triggerWords)
+    if (mt === 'exact') return <span key={i} className="text-cyano">{part}</span>
+    if (mt) return <span key={i} className="text-safe underline decoration-safe/40 decoration-dotted underline-offset-2">{part}</span>
+    return part
+  })
+}
+
 function TagChip({ tag, onRemove, onEdit, id }: { tag: string; onRemove: () => void; onEdit: () => void; id: string }) {
+  const triggerWords = useDatasetStore((s) => s.triggerWords)
+  const matchType = getTagMatchType(tag, triggerWords)
+  const matchBorder = matchType === 'exact' ? 'border-l-cyano' : matchType ? 'border-l-safe' : 'border-coal-600'
+  const matchText = matchType === 'exact' ? 'text-cyano' : matchType ? 'text-safe' : ''
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }
   return (
-    <span ref={setNodeRef} style={style} {...attributes} {...listeners} className="inline-flex items-center gap-1 px-2 py-0.5 bg-coal-700 text-paper rounded-md text-xs font-mono cursor-grab active:cursor-grabbing border border-coal-600">
-      <span className="cursor-pointer hover:text-cyano" onClick={onEdit}>{tag}</span>
+    <span ref={setNodeRef} style={style} {...attributes} {...listeners} className={`inline-flex items-center gap-1 px-2 py-0.5 bg-coal-700 rounded-md text-xs font-mono cursor-grab active:cursor-grabbing border-l-2 ${matchBorder} border-r border-t border-b border-coal-600`}>
+      <span className={`cursor-pointer hover:text-cyano ${matchText}`} onClick={onEdit}>{tag}</span>
       <button onClick={onRemove} className="text-paper-faint hover:text-ember ml-0.5">&times;</button>
     </span>
   )
@@ -24,6 +57,7 @@ export default function EditorPanel() {
   const items = useDatasetStore((s) => s.items)
   const selectedFilename = useDatasetStore((s) => s.selectedFilename)
   const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
+  const triggerWords = useDatasetStore((s) => s.triggerWords)
   const setSelected = useDatasetStore((s) => s.setSelected)
   const setPanelOpen = useDatasetStore((s) => s.setPanelOpen)
   const updateItem = useDatasetStore((s) => s.updateItem)
@@ -345,17 +379,19 @@ export default function EditorPanel() {
                         />
                       )
                     }
+                    const batchMatchType = getTagMatchType(tag, triggerWords)
+                    const batchMatchBorder = batchMatchType === 'exact' ? 'border-l-cyano' : batchMatchType ? 'border-l-safe' : ''
                     return (
                       <span
                         key={i}
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono border transition-colors ${
                           isRemoved
                             ? 'bg-coal-900 text-paper-faint/50 border-coal-700 line-through cursor-pointer'
-                            : 'bg-coal-800 text-paper-muted border-coal-600'
+                            : `bg-coal-800 text-paper-muted ${batchMatchBorder ? `border-l-2 ${batchMatchBorder} border-r border-t border-b border-coal-600` : 'border-coal-600'}`
                         }`}
                       >
                         <span
-                          className="cursor-pointer hover:text-paper"
+                          className={`cursor-pointer hover:text-paper ${batchMatchType === 'exact' ? 'text-cyano' : batchMatchType ? 'text-safe' : ''}`}
                           onClick={() => {
                             if (!isRemoved) {
                               setEditingTag(tag)
@@ -487,12 +523,20 @@ export default function EditorPanel() {
               />
             </div>
           ) : (
-            <textarea
-              value={caption}
-              onChange={(e) => { setCaption(e.target.value); setDirty(true) }}
-              className="w-full h-32 bg-coal-800 text-paper text-sm font-mono p-2 rounded-md border border-coal-600 outline-none resize-none placeholder-paper-faint"
-              placeholder="Enter caption..."
-            />
+            <div className="space-y-2">
+              <textarea
+                value={caption}
+                onChange={(e) => { setCaption(e.target.value); setDirty(true) }}
+                className="w-full h-32 bg-coal-800 text-paper text-sm font-mono p-2 rounded-md border border-coal-600 outline-none resize-none placeholder-paper-faint"
+                placeholder="Enter caption..."
+              />
+              {triggerWords.length > 0 && caption && (
+                <div className="font-mono text-xs text-paper-muted leading-snug p-2 bg-coal-800/50 rounded-md border border-coal-700">
+                  <span className="text-paper-faint mr-1.5">preview:</span>
+                  {highlightCaptionEditor(caption, triggerWords)}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </aside>

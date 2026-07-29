@@ -71,13 +71,13 @@ export default function EditorPanel() {
   const [editorHeight, setEditorHeight] = useState(180)
   const resizing = useRef(false)
 
-  const handleEditorResizeStart = useCallback((e: React.MouseEvent) => {
+  const handleEditorResizeStart = useCallback((e: React.PointerEvent) => {
     e.preventDefault()
     resizing.current = true
     const startY = e.clientY
     const startH = editorHeight
 
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       if (!resizing.current) return
       const aside = asideRef.current
       if (!aside) return
@@ -89,12 +89,12 @@ export default function EditorPanel() {
 
     const onUp = () => {
       resizing.current = false
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
     }
 
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
   }, [editorHeight])
 
   const selectedItem = items.find((i) => i.filename === selectedFilename)
@@ -331,9 +331,9 @@ export default function EditorPanel() {
   return (
     <>
       {showGpuDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowGpuDialog(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowGpuDialog(false)} role="dialog" aria-modal="true" aria-labelledby="editor-gpu-title">
           <div className="bg-coal-900 border border-coal-700 rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-display text-lg text-paper mb-3">CUDA not found</h3>
+            <h3 id="editor-gpu-title" className="font-display text-lg text-paper mb-3">CUDA not found</h3>
             <p className="font-mono text-sm text-paper-muted mb-6 leading-relaxed">
               No GPU (CUDA) found on your system. Auto-tagging will use the CPU — this may be significantly slower.
             </p>
@@ -374,7 +374,7 @@ export default function EditorPanel() {
           </div>
         )}
 
-        {isBatch ? (
+        {isBatch ? (<>
           <div className="flex-1 overflow-y-auto bg-coal-950 px-4 py-3">
             {commonTags.length > 0 && (
               <div className="mb-3">
@@ -460,12 +460,12 @@ export default function EditorPanel() {
               </div>
             )}
           </div>
-        ) : isBatch ? (
           <div className="px-4 py-3 border-t border-coal-700">
             <div className="flex items-center gap-2 mb-2">
               <select
                 value={batchMode}
                 onChange={(e) => setBatchMode(e.target.value as 'append' | 'prepend' | 'set')}
+                aria-label="Batch operation mode"
                 className="bg-coal-800 text-paper text-xs font-mono border border-coal-600 rounded-md px-2 py-1"
               >
                 <option value="append">Append</option>
@@ -478,12 +478,13 @@ export default function EditorPanel() {
               <textarea
                 value={caption}
                 onChange={(e) => { setCaption(e.target.value); setDirty(true) }}
+                aria-label="Batch caption text"
                 className="w-full h-32 bg-coal-800 text-paper text-sm font-mono p-2 rounded-md border border-coal-600 outline-none resize-none placeholder-paper-faint"
                 placeholder="Enter caption..."
               />
             </div>
           </div>
-        ) : (
+        </>) : (
           <div className="flex flex-col flex-1 overflow-hidden">
             <div className="px-4 py-2 border-b border-coal-700">
               <p className="font-mono text-xs text-paper-faint truncate">{selectedItem!.filename}</p>
@@ -502,8 +503,10 @@ export default function EditorPanel() {
             </div>
 
             <div
-              onMouseDown={handleEditorResizeStart}
+              onPointerDown={handleEditorResizeStart}
               className="h-2 cursor-row-resize shrink-0 relative group"
+              role="separator"
+              aria-label="Resize caption editor"
             >
               <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-0.5 rounded-full bg-coal-600 group-hover:bg-coal-500 transition-colors" />
             </div>

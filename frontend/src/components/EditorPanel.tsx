@@ -508,9 +508,9 @@ export default function EditorPanel() {
               <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-0.5 rounded-full bg-coal-600 group-hover:bg-coal-500 transition-colors" />
             </div>
 
-            <div style={{ height: editorHeight }} className="shrink-0 overflow-y-auto border-t border-coal-700 px-4 py-3">
+            <div style={{ height: editorHeight }} className="shrink-0 border-t border-coal-700">
               {tagMode ? (
-                <div>
+                <div className="overflow-y-auto h-full px-4 py-3">
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => {
                     const { active, over } = e
                     if (over && active.id !== over.id) {
@@ -565,15 +565,15 @@ export default function EditorPanel() {
                   />
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="flex flex-col h-full px-4 py-3 min-h-0">
                   <textarea
                     value={caption}
                     onChange={(e) => { setCaption(e.target.value); setDirty(true) }}
-                    className="w-full h-32 bg-coal-800 text-paper text-sm font-mono p-2 rounded-md border border-coal-600 outline-none resize-none placeholder-paper-faint"
+                    className="flex-1 min-h-0 w-full bg-coal-800 text-paper text-sm font-mono p-2 rounded-md border border-coal-600 outline-none resize-none placeholder-paper-faint"
                     placeholder="Enter caption..."
                   />
                   {triggerWords.length > 0 && caption && (
-                    <div className="font-mono text-xs text-paper-muted leading-snug p-2 bg-coal-800/50 rounded-md border border-coal-700">
+                    <div className="font-mono text-xs text-paper-muted leading-snug p-2 bg-coal-800/50 rounded-md border border-coal-700 mt-2 shrink-0">
                       <span className="text-paper-faint mr-1.5">preview:</span>
                       {highlightCaptionEditor(caption, triggerWords)}
                     </div>

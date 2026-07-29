@@ -1,6 +1,30 @@
 import { type Item } from '../api/client'
 import { useDatasetStore } from '../store/useDatasetStore'
 
+function normalize(s: string) {
+  return s.toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function highlightCaption(caption: string, triggerWords: string[]) {
+  if (!triggerWords.length || !caption) return caption
+  const parts = caption.split(/(,\s*)/)
+  return parts.map((part, i) => {
+    const tag = part.replace(/,\s*$/, '').trim()
+    if (!tag) return part
+    let matchType: 'exact' | 'case' | 'separator' | null = null
+    for (const tw of triggerWords) {
+      const tws = tw.trim()
+      if (!tws) continue
+      if (tag === tws) { matchType = 'exact'; break }
+      if (tag.toLowerCase() === tws.toLowerCase()) { matchType = 'case'; break }
+      if (normalize(tag) === normalize(tws)) { matchType = 'separator'; break }
+    }
+    if (matchType === 'exact') return <span key={i} className="text-cyano">{part}</span>
+    if (matchType) return <span key={i} className="text-safe underline decoration-safe/40 decoration-dotted underline-offset-2">{part}</span>
+    return part
+  })
+}
+
 export default function ImageCard({ item, index, isSelected, isMultiSelected, onSelect }: { item: Item; index: number; isSelected: boolean; isMultiSelected: boolean; onSelect: (e: React.MouseEvent) => void }) {
   const triggerResults = useDatasetStore((s) => s.triggerResults)
   const triggerWords = useDatasetStore((s) => s.triggerWords)
@@ -46,7 +70,7 @@ export default function ImageCard({ item, index, isSelected, isMultiSelected, on
           )}
         </div>
         <p className="font-mono text-xs text-paper-muted leading-snug line-clamp-2">
-          {item.caption || <span className="text-safe/60 italic">no caption</span>}
+          {highlightCaption(item.caption, triggerWords) || <span className="text-safe/60 italic">no caption</span>}
         </p>
       </div>
     </button>

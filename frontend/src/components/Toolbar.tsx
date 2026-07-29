@@ -1,11 +1,8 @@
-import { useState } from 'react'
-import { Search, PanelRightClose, Package, Target, Download, X } from 'lucide-react'
+import { Search, PanelRightClose, Package, Target, X } from 'lucide-react'
 import { useDatasetStore } from '../store/useDatasetStore'
-import { api } from '../api/client'
 import AutoTagPanel from './AutoTagPanel'
 
 export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBatch: () => void; onToggleTrigger: () => void }) {
-  const [exporting, setExporting] = useState(false)
   const searchQuery = useDatasetStore((s) => s.searchQuery)
   const datasetFilter = useDatasetStore((s) => s.datasetFilter)
   const selectedFilenames = useDatasetStore((s) => s.selectedFilenames)
@@ -14,12 +11,6 @@ export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBa
   const setDatasetFilter = useDatasetStore((s) => s.setDatasetFilter)
   const clearSelection = useDatasetStore((s) => s.clearSelection)
   const setPanelOpen = useDatasetStore((s) => s.setPanelOpen)
-
-  const handleExport = async () => {
-    setExporting(true)
-    try { await api.exportDataset() } catch { /* ignore */ }
-    setExporting(false)
-  }
 
   const hasSelection = selectedFilenames.length > 0 || selectedFilename !== null
   const selectionCount = selectedFilenames.length || (selectedFilename ? 1 : 0)
@@ -63,15 +54,6 @@ export default function Toolbar({ onToggleBatch, onToggleTrigger }: { onToggleBa
       >
         <Target size={14} />
         <span className="hidden sm:inline">Trigger</span>
-      </button>
-
-      <button
-        onClick={handleExport}
-        disabled={exporting}
-        className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-paper-muted hover:text-paper border border-coal-600 rounded-md shrink-0 disabled:opacity-50"
-      >
-        <Download size={14} />
-        <span className="hidden sm:inline">{exporting ? '...' : 'Export'}</span>
       </button>
 
       <AutoTagPanel />

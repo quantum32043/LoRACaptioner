@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { RotateCw, FolderUp, AlertTriangle, AlertCircle } from 'lucide-react'
+import { RotateCw, FolderUp, Download, AlertTriangle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '../api/client'
 import { useDatasetStore } from '../store/useDatasetStore'
@@ -10,6 +10,7 @@ const CHUNK_SIZE = 20
 export default function TopBar() {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [progress, setProgress] = useState({ current: 0, total: 0 })
   const setItems = useDatasetStore((s) => s.setItems)
 
@@ -69,6 +70,12 @@ export default function TopBar() {
     toast.success(`Uploaded ${totalSaved} files. Total in dataset: ${newData.total}`)
   }, [refetch, setItems])
 
+  const handleExport = async () => {
+    setExporting(true)
+    try { await api.exportDataset() } catch { /* ignore */ }
+    setExporting(false)
+  }
+
   const progressText = uploading ? `${progress.current}/${progress.total}` : ''
 
   return (
@@ -124,6 +131,15 @@ export default function TopBar() {
         >
           <RotateCw size={14} className={rescanning ? 'animate-spin' : ''} />
           <span className="hidden md:inline">Rescan</span>
+        </button>
+
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-paper-muted hover:text-paper border border-coal-600 rounded-md disabled:opacity-50"
+        >
+          <Download size={14} className={exporting ? 'animate-pulse' : ''} />
+          <span className="hidden md:inline">{exporting ? '...' : 'Export'}</span>
         </button>
       </div>
     </header>
